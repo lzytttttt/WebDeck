@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#c4b5fd"/>
+    </linearGradient>
+    <linearGradient id="g3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c4b5fd"/>
+      <stop offset="100%" stop-color="#ddd6fe"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background layer (bottom page) -->
+  <rect x="72" y="96" width="340" height="384" rx="24" fill="url(#g3)" opacity="0.6"/>
+
+  <!-- Middle layer -->
+  <rect x="96" y="72" width="340" height="384" rx="24" fill="url(#g2)" opacity="0.8"/>
+
+  <!-- Front layer (main page) -->
+  <rect x="120" y="48" width="340" height="384" rx="24" fill="url(#g1)"/>
+
+  <!-- Content lines on front page -->
+  <rect x="168" y="108" width="200" height="16" rx="8" fill="white" opacity="0.9"/>
+  <rect x="168" y="148" width="160" height="10" rx="5" fill="white" opacity="0.5"/>
+  <rect x="168" y="174" width="180" height="10" rx="5" fill="white" opacity="0.35"/>
+
+  <!-- Decorative card blocks -->
+  <rect x="168" y="216" width="92" height="72" rx="12" fill="white" opacity="0.2"/>
+  <rect x="276" y="216" width="92" height="72" rx="12" fill="white" opacity="0.2"/>
+
+  <!-- Bottom CTA bar -->
+  <rect x="168" y="320" width="140" height="36" rx="18" fill="white" opacity="0.9"/>
+
+  <!-- Sparkle accent (top-right) -->
+  <circle cx="420" cy="80" r="20" fill="#f59e0b" opacity="0.9"/>
+  <circle cx="420" cy="80" r="10" fill="white" opacity="0.8"/>
+</svg>

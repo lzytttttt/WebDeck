@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --primary: 222 60% 20%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 174 62% 42%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 174 62% 42%;
+    --radius: 0.6rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Enhanced-mode scroll deck smoothing */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ---------------------------------------------------------------------------
+ * Deck theming. Section components render inside a `.deck-root` whose inline
+ * style carries the resolved --deck-* custom properties (see lib/deck/theme).
+ * These semantic classes read those vars so a theme switch restyles the whole
+ * deck with zero Tailwind rebuild. The same classes are emitted by the static
+ * HTML export, keeping the offline render identical.
+ * ------------------------------------------------------------------------- */
+.deck-root {
+  background: var(--deck-bg);
+  color: var(--deck-text);
+  font-family: var(--deck-body-font);
+  font-size: calc(1rem * var(--deck-scale, 1));
+}
+.deck-heading {
+  font-family: var(--deck-heading-font);
+  color: var(--deck-text);
+}
+.deck-text { color: var(--deck-text); }
+.deck-muted { color: var(--deck-muted); }
+.deck-accent { color: var(--deck-accent); }
+.deck-primary { color: var(--deck-primary); }
+.deck-bg-accent { background: var(--deck-accent); color: #fff; }
+.deck-bg-primary { background: var(--deck-primary); }
+.deck-bg-surface { background: var(--deck-surface); }
+.deck-border { border-color: color-mix(in srgb, var(--deck-text) 14%, transparent); }
+.deck-card {
+  background: var(--deck-surface);
+  border: 1px solid color-mix(in srgb, var(--deck-text) 12%, transparent);
+  border-radius: var(--deck-radius);
+  box-shadow: var(--deck-shadow);
+}
+.deck-radius { border-radius: var(--deck-radius); }
+.deck-section { padding-top: calc(var(--deck-section-gap) * 0.6); padding-bottom: calc(var(--deck-section-gap) * 0.6); }
+
+/* Inline editing affordances */
+[contenteditable="true"] { outline: none; cursor: text; border-radius: 4px; }
+[contenteditable="true"]:hover { box-shadow: 0 0 0 1px color-mix(in srgb, var(--deck-accent) 40%, transparent); }
+[contenteditable="true"]:focus { box-shadow: 0 0 0 2px var(--deck-accent); }
+[contenteditable="true"]:empty::before {
+  content: attr(data-placeholder);
+  color: var(--deck-muted);
+  opacity: 0.6;
+}
+
+/* Motion presets (opt-in via .deck-anim-*) */
+@keyframes deck-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes deck-slide-up { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+@keyframes deck-scale { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+.deck-anim-fade { animation: deck-fade var(--deck-anim-dur, 0.5s) ease both; animation-delay: var(--deck-anim-delay, 0s); }
+.deck-anim-slide-up { animation: deck-slide-up var(--deck-anim-dur, 0.5s) ease both; animation-delay: var(--deck-anim-delay, 0s); }
+.deck-anim-scale { animation: deck-scale var(--deck-anim-dur, 0.5s) ease both; animation-delay: var(--deck-anim-delay, 0s); }
+@media (prefers-reduced-motion: reduce) {
+  .deck-anim-fade, .deck-anim-slide-up, .deck-anim-scale { animation: none; }
+}
