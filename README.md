@@ -2,6 +2,8 @@
 
 > **PPT → HTML 转换层** — 把你的 PowerPoint 变成交互式网页演示文稿
 
+**🔗 [在线体验 Demo](https://web-deck-pied.vercel.app/)**
+
 [English](./README_EN.md) | **简体中文**
 
 ---
