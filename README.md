@@ -16,6 +16,45 @@
 
 ---
 
+## 💡 为什么需要 Web Deck？
+
+### PPT 的范式困境
+
+PowerPoint 诞生于 1987 年，它的核心假设是：**演示 = 线性翻页的幻灯片**。这个假设在投影仪时代是合理的，但在今天——
+
+```
+1987 年的世界                    2026 年的世界
+┌──────────────┐               ┌──────────────┐
+│ 一台投影仪    │               │ 手机·平板·PC  │
+│ 一个全屏软件  │        →      │ 微信·飞书·邮件 │
+│ 线性翻页      │               │ 响应式·交互    │
+│ 离线文件交换  │               │ 链接分享·协作  │
+└──────────────┘               └──────────────┘
+```
+
+| PPT 的痛点 | 根因 | Web Deck 的解法 |
+|---|---|---|
+| 打开需要 PowerPoint/WPS | 私有二进制格式 | 浏览器原生，零依赖 |
+| 手机上排版错乱 | 固定像素布局 | 响应式设计，三端适配 |
+| 分享要发文件（几十 MB） | 文件分发模式 | 一个链接，几 KB HTML |
+| 内容是"死"的 | 线性翻页，无交互 | FAQ 手风琴、卡片、时间线等原生交互 |
+| 版本管理混乱 | 二进制 diff 不可能 | JSON 结构化数据，Git 友好 |
+| 内容无法被搜索/引用 | 视觉格式，无语义 | 语义化 HTML，可索引可引用 |
+
+### 不是替代 PPT，而是升级范式
+
+Web Deck 的定位不是"又一个演示工具"，而是一个**过渡层**：
+
+```
+传统工作流：  Word 写稿 → PPT 排版 → 发文件 → 对方用 PPT 打开
+                              ↓ Web Deck
+新工作流：    PPT 写稿 → Web Deck 转换 → 链接分享 → 浏览器打开
+```
+
+你不需要重新学任何东西。**你的 PPT 技能完全保留**——Web Deck 在 PPT 的基础上叠加了 HTML 的能力，而不是推倒重来。
+
+---
+
 ## ✨ 核心特性
 
 ### 📑 PPTX 智能解析
@@ -84,6 +123,60 @@ Web Deck 支持 **12 种原生区块**，覆盖几乎所有演示场景：
 
 ---
 
+## 🏛️ 设计哲学
+
+### "内容源"而非"视觉格式"
+
+传统 PPT 转换工具（如 LibreOffice 导出 PDF/HTML）本质上是在做**像素级搬运**——把幻灯片的视觉外观"截图"到另一个格式。Web Deck 的思路完全不同：
+
+> **把 PPT 当作"结构化内容源"，而非"视觉格式"。**
+
+PPT 的每一页都包含语义信息：这是封面、这是目录、这是数据对比、这是 FAQ。Web Deck 通过 AI 理解这些语义，然后用**最合适的网页原生组件**重新表达——而不是把 PPT 的视觉外观"拍照"到网页上。
+
+```
+传统转换：  PPT 视觉 → 截图/矢量图 → 嵌入网页（还是"死"的）
+Web Deck：  PPT 内容 → AI 语义理解 → 原生网页组件（活的、可交互的）
+```
+
+### 双 Provider 架构：永不卡死
+
+```
+用户上传 PPT
+    │
+    ▼
+[AIProvider.generateWebDeck()]
+    │
+    ├── Anthropic API 可用？
+    │   └── Yes → Claude 语义理解 → 结构化 JSON
+    │
+    └── No（网络问题/无 Key/超时）
+        └── 自动回退 → MockAIProvider → 确定性本地生成
+```
+
+**用户永远不会看到"转换失败"。** 离线模式下，Mock 引擎基于启发式规则生成可用的 deck——虽然不如 AI 智能，但保证了完整的可用性。
+
+### Theme → CSS Variables 桥接
+
+编辑器中的每一个设计调整（主题切换、圆角、阴影、间距）都通过 CSS 自定义属性驱动：
+
+```css
+:root {
+  --deck-bg: #ffffff;
+  --deck-text: #1a1a2e;
+  --deck-accent: #6366f1;
+  --deck-radius: 12px;
+  --deck-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+}
+```
+
+**预览和导出共用同一套变量**——编辑器里看到的效果 = 导出的 HTML 文件的效果 = 最终分享链接的效果。所见即所得。
+
+### 零依赖图表渲染
+
+手写 SVG 图表渲染器（柱状图、折线图、饼图、环形图、KPI 卡片、数据表格），不依赖 Chart.js / D3 / ECharts 等第三方库。颜色通过 `color-mix()` 从主题 CSS 变量自动派生——切换主题时图表颜色自动跟随变化。
+
+---
+
 ## 🚀 快速开始
 
 ### 环境要求
@@ -94,8 +187,8 @@ Web Deck 支持 **12 种原生区块**，覆盖几乎所有演示场景：
 ### 安装
 
 ```bash
-git clone https://github.com/your-username/web-deck.git
-cd web-deck
+git clone https://github.com/lzytttttt/WebDeck.git
+cd WebDeck
 npm install
 ```
 
@@ -147,6 +240,32 @@ npm run seed:demo
 └─────────────────────────────────────────────────────┘
 ```
 
+### 核心数据流
+
+```
+.pptx 文件
+    │
+    ▼
+[JSZip 解压] → [fast-xml-parser 提取 XML] → [extractSlideText]
+    │
+    ▼
+ParsedSlide[] (title, rawText, bullets, notes, imageRefCount, tableRefCount)
+    │
+    ├──→ [buildImportQualityReport] → 6 种警告
+    │
+    ▼
+[AIProvider.generateWebDeck()]
+    ├── AnthropicAIProvider: Claude API → JSON Schema 校验
+    └── MockAIProvider: 启发式规则 → 确定性生成
+    │
+    ▼
+WebDeck JSON (id, title, theme, sections[], suggestions[])
+    │
+    ├──→ [DeckRenderer] → React 组件树
+    ├──→ [Presenter] → 全屏演示
+    └──→ [exportStaticHtml] → 自包含 .html 文件
+```
+
 ### 核心模块
 
 | 模块 | 路径 | 说明 |
@@ -165,7 +284,7 @@ npm run seed:demo
 ## 📂 项目结构
 
 ```
-web-deck/
+WebDeck/
 ├── app/                          # Next.js App Router
 │   ├── page.tsx                  # 首页
 │   ├── projects/                 # 项目管理
@@ -193,6 +312,39 @@ web-deck/
 ├── scripts/                      # 工具脚本
 └── data/                         # 项目数据（git ignored）
 ```
+
+---
+
+## ⚠️ 已知限制
+
+| 限制 | 说明 | 计划 |
+|---|---|---|
+| 不提取 PPT 中的图片 | 当前只统计图片引用数，不提取二进制数据 | Roadmap v0.3 |
+| 不保留 PPT 动画/过渡 | PPT 的入场动画、切换效果无法映射 | Roadmap v0.4 |
+| 不支持 SmartArt | SmartArt 是 PPT 特有的复杂元素 | 暂无计划 |
+| AI 结果需人工审核 | AI 可能误判内容语义，建议转换后检查 | 持续优化 Prompt |
+
+---
+
+## 🗺️ Roadmap
+
+- [ ] **v0.2** — 图片提取与内联（从 PPTX 中提取图片嵌入 HTML）
+- [ ] **v0.3** — 更多 AI Provider（OpenAI、本地模型、Ollama）
+- [ ] **v0.4** — PPT 动画 → CSS 动画映射
+- [ ] **v0.5** — 模板市场（社区共享 deck 模板）
+- [ ] **v1.0** — 团队协作 + 版本历史 + 批注
+
+---
+
+## 📊 性能参考
+
+| 指标 | 典型值 |
+|---|---|
+| PPTX 解析（10 页） | < 1 秒 |
+| AI 转换（10 页，保守模式） | 5-15 秒（取决于 API 响应） |
+| Mock 转换（10 页） | < 500 毫秒 |
+| 导出 HTML 文件大小 | 10-50 KB（不含图片） |
+| 首屏加载 | < 2 秒 |
 
 ---
 
@@ -234,11 +386,11 @@ web-deck/
 - [Next.js](https://nextjs.org/) — 全栈 React 框架
 - [Tailwind CSS](https://tailwindcss.com/) — 原子化 CSS
 - [JSZip](https://stuk.github.io/jszip/) — PPTX ZIP 解压
+- [fast-xml-parser](https://github.com/NaturalIntelligence/fast-xml-parser/) — XML 解析
 - [Lucide](https://lucide.dev/) — 图标库
 
 ---
 
 <p align="center">
-  <strong>Web Deck</strong> — 让每一份 展示 都能以最现代的方式被看见 ✨
+  <strong>Web Deck</strong> — 让每一份展示都能以最现代的方式被看见 ✨
 </p>
-
