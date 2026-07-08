@@ -1,51 +1,17 @@
 "use client";
 
 import type { WebDeck, DeckSection, DeckTheme } from "@/types/deck";
-import { HeroSection } from "./HeroSection";
-import { AgendaSection } from "./AgendaSection";
-import { SlideLikeSection } from "./SlideLikeSection";
-import { CardsSection } from "./CardsSection";
-import { TimelineSection } from "./TimelineSection";
-import { ComparisonSection } from "./ComparisonSection";
-import { FAQSection } from "./FAQSection";
-import { QuoteSection } from "./QuoteSection";
-import { CTASection } from "./CTASection";
-import { ImageSection } from "./ImageSection";
-import { GallerySection } from "./GallerySection";
-import { ChartSection } from "./ChartSection";
+import { getSection } from "@/lib/deck/sections";
 import { EditProvider, useMaybeEdit, type EditContextValue } from "./EditContext";
 import { themeToCssVars } from "@/lib/deck/theme";
 import { cn } from "@/lib/utils";
+import { SectionErrorBoundary } from "@/components/ErrorBoundary";
 
 export function SectionSwitch({ section }: { section: DeckSection }) {
-  switch (section.type) {
-    case "hero":
-      return <HeroSection section={section} />;
-    case "agenda":
-      return <AgendaSection section={section} />;
-    case "slide":
-      return <SlideLikeSection section={section} />;
-    case "cards":
-      return <CardsSection section={section} />;
-    case "timeline":
-      return <TimelineSection section={section} />;
-    case "comparison":
-      return <ComparisonSection section={section} />;
-    case "faq":
-      return <FAQSection section={section} />;
-    case "quote":
-      return <QuoteSection section={section} />;
-    case "cta":
-      return <CTASection section={section} />;
-    case "image":
-      return <ImageSection section={section} />;
-    case "gallery":
-      return <GallerySection section={section} />;
-    case "chart":
-      return <ChartSection section={section} />;
-    default:
-      return null;
-  }
+  const def = getSection(section.type);
+  if (!def) return null;
+  const Component = def.Component;
+  return <Component section={section} />;
 }
 
 // Resolve the CSS animation class for a section given deck + section motion.
@@ -122,13 +88,14 @@ export function DeckRenderer({
       style={themeToCssVars(deck.theme) as React.CSSProperties}
     >
       {deck.sections.map((section, i) => (
-        <SectionWrapper
-          key={section.id}
-          deck={deck}
-          section={section}
-          index={i}
-          conservative={conservative}
-        />
+        <SectionErrorBoundary key={section.id} sectionId={section.id}>
+          <SectionWrapper
+            deck={deck}
+            section={section}
+            index={i}
+            conservative={conservative}
+          />
+        </SectionErrorBoundary>
       ))}
     </div>
   );

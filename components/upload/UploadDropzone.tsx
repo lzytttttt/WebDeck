@@ -124,6 +124,11 @@ export function UploadDropzone() {
             <p className="mt-2 text-xs text-muted-foreground">
               {progress < 100 ? `${t.upload.uploading} ${progress}%` : t.upload.parsing}
             </p>
+            {progress >= 100 && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                解析完成，即将跳转到编辑页面…
+              </p>
+            )}
           </>
         ) : (
           <>

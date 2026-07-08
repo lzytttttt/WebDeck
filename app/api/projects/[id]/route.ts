@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getProject, updateProject, deleteProject } from "@/lib/storage/projectStore";
+import { getProject, updateProject, deleteProject } from "@/lib/storage/projectRepo";
+import { ensureDb } from "@/lib/storage/db";
 import type { Project } from "@/types/project";
 
 export const runtime = "nodejs";
@@ -8,6 +9,7 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  await ensureDb();
   const project = await getProject(params.id);
   if (!project) {
     return NextResponse.json({ error: "项目不存在" }, { status: 404 });
@@ -21,6 +23,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } },
 ) {
+  await ensureDb();
   const project = await getProject(params.id);
   if (!project) {
     return NextResponse.json({ error: "项目不存在" }, { status: 404 });
@@ -50,6 +53,7 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: { id: string } },
 ) {
+  await ensureDb();
   const ok = await deleteProject(params.id);
   if (!ok) {
     return NextResponse.json({ error: "项目不存在" }, { status: 404 });

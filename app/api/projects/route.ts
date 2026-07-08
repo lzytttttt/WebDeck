@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { listProjects } from "@/lib/storage/projectStore";
+import { listProjects } from "@/lib/storage/projectRepo";
+import { ensureDb } from "@/lib/storage/db";
 import type { Project } from "@/types/project";
 
 export const runtime = "nodejs";
@@ -39,6 +40,7 @@ function toSummary(p: Project): ProjectSummary {
 
 // GET /api/projects?demo=1 -> only demos; ?demo=0 -> only non-demos; default all.
 export async function GET(req: Request) {
+  await ensureDb();
   const url = new URL(req.url);
   const demo = url.searchParams.get("demo");
   let projects = await listProjects();

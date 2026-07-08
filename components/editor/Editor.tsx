@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import Link from "next/link";
 import type { Project } from "@/types/project";
 import type { WebDeck, DeckMode, DeckSection, DeckTheme } from "@/types/deck";
@@ -39,9 +39,88 @@ function isPublishResponse(v: unknown): v is PublishResponse {
   );
 }
 
+/** Loading screen shown while AI generates the initial deck. */
+function GeneratingOverlay({ message }: { message: string }) {
+  return (
+    <div className="flex h-screen flex-col items-center justify-center gap-4">
+      <div className="h-10 w-10 animate-spin rounded-full border-4 border-accent border-t-transparent" />
+      <p className="text-lg font-medium text-foreground">{message}</p>
+      <p className="text-sm text-muted-foreground">
+        AI 正在将您的 PPT 转换为交互式网页…
+      </p>
+    </div>
+  );
+}
+
 export function Editor({ project }: { project: Project }) {
   const { t } = useI18n();
-  const initialDeck = project.webDeck!;
+
+  // --- Generation state: handle "parsed" projects that need AI generation ---
+  const needsGeneration = project.status === "parsed" || !project.webDeck;
+  const [generatedDeck, setGeneratedDeck] = useState<WebDeck | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+
+  const triggerGenerate = useCallback(async () => {
+    setGenerating(true);
+    setGenerateError(null);
+    try {
+      const res = await fetch(`/api/projects/${project.id}/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "conservative", regenerate: true }),
+      });
+      if (!res.ok) throw new Error("Generation failed");
+      const updated: Project = await res.json();
+      if (updated.webDeck) {
+        setGeneratedDeck(updated.webDeck);
+      } else {
+        setGenerateError("生成失败，请重试");
+      }
+    } catch {
+      setGenerateError("生成失败，请重试");
+    } finally {
+      setGenerating(false);
+    }
+  }, [project.id]);
+
+  useEffect(() => {
+    if (needsGeneration && !generatedDeck && !generating && !generateError) {
+      triggerGenerate();
+    }
+  }, [needsGeneration, generatedDeck, generating, generateError, triggerGenerate]);
+
+  // Show loading/error state for projects that need generation
+  if (needsGeneration && !generatedDeck) {
+    if (generateError) {
+      return (
+        <div className="flex h-screen flex-col items-center justify-center gap-4">
+          <p className="text-lg font-medium text-destructive">{generateError}</p>
+          <Button onClick={triggerGenerate} disabled={generating}>
+            {generating ? "生成中…" : "重试"}
+          </Button>
+          <Link href="/projects" className="text-sm text-muted-foreground hover:text-foreground">
+            ← 返回项目列表
+          </Link>
+        </div>
+      );
+    }
+    return <GeneratingOverlay message="正在生成 Web Deck…" />;
+  }
+
+  return <EditorInner project={project} overrideDeck={generatedDeck} />;
+}
+
+/** The actual editor, rendered once a deck is available. */
+function EditorInner({
+  project,
+  overrideDeck,
+}: {
+  project: Project;
+  overrideDeck: WebDeck | null;
+}) {
+  const { t } = useI18n();
+  const initialDeck = overrideDeck ?? project.webDeck!;
   const ed = useDeckEditor(project.id, initialDeck, project.assets ?? []);
   const [tab, setTab] = useState<Tab>("content");
   const [adding, setAdding] = useState(false);

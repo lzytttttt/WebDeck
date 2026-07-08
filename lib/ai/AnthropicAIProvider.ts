@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { AIProvider, GenerateWebDeckInput, GenerateSuggestionsInput } from "./AIProvider";
 import type { WebDeck, EnhancementSuggestion } from "@/types/deck";
 import { mockProvider } from "./MockAIProvider";
-import { validateWebDeck, validateSuggestions } from "./schema";
+import { validateWebDeck, validateWebDeckWithZod, validateSuggestions, validateSuggestionsWithZod } from "./schema";
 import {
   WEB_DECK_SYSTEM_PROMPT,
   buildWebDeckUserPrompt,
@@ -71,7 +71,7 @@ export class AnthropicAIProvider implements AIProvider {
         buildWebDeckUserPrompt(input.projectName, input.slides, input.mode)
       );
       const parsed = extractJson(text);
-      const deck = validateWebDeck(parsed);
+      const deck = validateWebDeckWithZod(parsed) ?? validateWebDeck(parsed);
       if (deck) {
         // Ensure ids and mode are consistent with the request.
         deck.id = deck.id || uid("deck_");

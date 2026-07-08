@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getProjectByShareId } from "@/lib/storage/projectStore";
+import { getProjectByShareId } from "@/lib/storage/projectRepo";
+import { ensureDb } from "@/lib/storage/db";
 import { DeckRenderer } from "@/components/deck/DeckRenderer";
 import { normalizeDeck } from "@/lib/deck/normalize";
 import { ShareChrome } from "./ShareChrome";
@@ -10,6 +11,7 @@ export async function generateMetadata({
 }: {
   params: { shareId: string };
 }): Promise<Metadata> {
+  await ensureDb();
   const project = await getProjectByShareId(params.shareId);
   const deck = project?.webDeck;
   if (!deck) return { title: "Web Deck" };
@@ -31,6 +33,7 @@ export default async function SharePage({
 }: {
   params: { shareId: string };
 }) {
+  await ensureDb();
   const project = await getProjectByShareId(params.shareId);
   if (!project || !project.share?.isPublished || !project.webDeck) notFound();
 

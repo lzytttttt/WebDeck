@@ -1,0 +1,737 @@
+{
+  "projects": [
+    {
+      "id": "proj_demo_company",
+      "name": "Company Profile Web Deck",
+      "sourceFileName": "company-demo.pptx",
+      "createdAt": "2024-12-01T00:00:00.000Z",
+      "updatedAt": "2024-12-01T01:00:00.000Z",
+      "status": "published",
+      "slides": [],
+      "webDeck": {
+        "id": "deck_demo_company",
+        "title": "Company Profile Web Deck",
+        "subtitle": "A polished company overview with metrics, timeline, and team highlights.",
+        "theme": {
+          "id": "classic-business",
+          "colors": {}
+        },
+        "mode": "enhanced",
+        "motion": {
+          "preset": "fade",
+          "transition": "fade"
+        },
+        "sections": [
+          {
+            "id": "sec_demo_company_1",
+            "sourceSlideIndexes": [],
+            "type": "hero",
+            "title": "Northwind Industries",
+            "subtitle": "Engineering reliable infrastructure since 2008.",
+            "eyebrow": "Company Profile",
+            "layout": "metrics",
+            "metrics": [
+              {
+                "value": "16",
+                "label": "Years in business"
+              },
+              {
+                "value": "240+",
+                "label": "Enterprise clients"
+              },
+              {
+                "value": "38",
+                "label": "Countries served"
+              }
+            ]
+          },
+          {
+            "id": "sec_demo_company_2",
+            "sourceSlideIndexes": [],
+            "type": "agenda",
+            "title": "What we do",
+            "items": [
+              {
+                "label": "Platform",
+                "description": "Cloud infrastructure and tooling."
+              },
+              {
+                "label": "Services",
+                "description": "Migration and managed operations."
+              },
+              {
+                "label": "Support",
+                "description": "24/7 global coverage."
+              }
+            ]
+          },
+          {
+            "id": "sec_demo_company_3",
+            "sourceSlideIndexes": [],
+            "type": "image",
+            "title": "Our headquarters",
+            "layout": "split-left",
+            "image": {
+              "url": "https://picsum.photos/seed/office/1200/700",
+              "alt": "Modern office"
+            },
+            "content": {
+              "title": "Built for scale",
+              "description": "Three regional hubs keep us close to every customer."
+            }
+          },
+          {
+            "id": "sec_demo_company_4",
+            "sourceSlideIndexes": [],
+            "type": "timeline",
+            "title": "Milestones",
+            "items": [
+              {
+                "time": "2008",
+                "title": "Founded",
+                "description": "Two engineers, one server rack."
+              },
+              {
+                "time": "2015",
+                "title": "Series B",
+                "description": "Expanded to EMEA."
+              },
+              {
+                "time": "2022",
+                "title": "Global",
+                "description": "Crossed 200 enterprise clients."
+              }
+            ]
+          },
+          {
+            "id": "sec_demo_company_5",
+            "sourceSlideIndexes": [],
+            "type": "chart",
+            "title": "Revenue growth",
+            "chartType": "bar",
+            "layout": "chart-with-insight",
+            "insight": "Revenue has grown 3x over the last four years.",
+            "data": {
+              "columns": [
+                "Year",
+                "Revenue"
+              ],
+              "rows": [
+                {
+                  "Year": "2021",
+                  "Revenue": 42
+                },
+                {
+                  "Year": "2022",
+                  "Revenue": 61
+                },
+                {
+                  "Year": "2023",
+                  "Revenue": 98
+                },
+                {
+                  "Year": "2024",
+                  "Revenue": 134
+                }
+              ]
+            },
+            "config": {
+              "xKey": "Year",
+              "yKeys": [
+                "Revenue"
+              ],
+              "showLegend": true,
+              "showGrid": true
+            }
+          },
+          {
+            "id": "sec_demo_company_6",
+            "sourceSlideIndexes": [],
+            "type": "cta",
+            "title": "Let's build together",
+            "description": "Talk to our team about your infrastructure roadmap.",
+            "primaryLabel": "Contact sales"
+          }
+        ],
+        "suggestions": []
+      },
+      "isDemo": true,
+      "demoMeta": {
+        "key": "company",
+        "theme": "Classic Business",
+        "title": {
+          "zh-CN": "公司简介 Web Deck",
+          "en": "Company Profile Web Deck"
+        },
+        "description": {
+          "zh-CN": "精致的公司概览，包含关键指标、发展时间线与团队亮点。",
+          "en": "A polished company overview with metrics, timeline, and team highlights."
+        }
+      },
+      "share": {
+        "shareId": "share_demo_company",
+        "isPublished": true,
+        "createdAt": "2024-12-01T00:00:00.000Z"
+      }
+    },
+    {
+      "id": "proj_demo_product",
+      "name": "Product Launch Web Deck",
+      "sourceFileName": "product-demo.pptx",
+      "createdAt": "2024-12-02T00:00:00.000Z",
+      "updatedAt": "2024-12-02T01:00:00.000Z",
+      "status": "generated",
+      "slides": [],
+      "webDeck": {
+        "id": "deck_demo_product",
+        "title": "Product Launch Web Deck",
+        "subtitle": "Announce a product with a hero, feature cards, comparison, and a strong CTA.",
+        "theme": {
+          "id": "modern-saas",
+          "colors": {}
+        },
+        "mode": "enhanced",
+        "motion": {
+          "preset": "slide-up",
+          "transition": "slide"
+        },
+        "sections": [
+          {
+            "id": "sec_demo_product_1",
+            "sourceSlideIndexes": [],
+            "type": "hero",
+            "title": "Introducing Pulse 2.0",
+            "subtitle": "Real-time analytics that finally keep up with your team.",
+            "eyebrow": "Product Launch",
+            "layout": "split"
+          },
+          {
+            "id": "sec_demo_product_2",
+            "sourceSlideIndexes": [],
+            "type": "cards",
+            "title": "What's new",
+            "layout": "feature-list",
+            "cards": [
+              {
+                "title": "Live dashboards",
+                "description": "Sub-second refresh across every metric.",
+                "tag": "New"
+              },
+              {
+                "title": "Smart alerts",
+                "description": "Anomaly detection without threshold tuning.",
+                "tag": "New"
+              },
+              {
+                "title": "Team spaces",
+                "description": "Shared views with role-based access."
+              }
+            ]
+          },
+          {
+            "id": "sec_demo_product_3",
+            "sourceSlideIndexes": [],
+            "type": "image",
+            "title": "The new dashboard",
+            "layout": "full-width",
+            "image": {
+              "url": "https://picsum.photos/seed/dashboard/1200/700",
+              "alt": "Analytics dashboard"
+            }
+          },
+          {
+            "id": "sec_demo_product_4",
+            "sourceSlideIndexes": [],
+            "type": "comparison",
+            "title": "Pulse vs. the old way",
+            "leftHeader": "Pulse 2.0",
+            "rightHeader": "Spreadsheets",
+            "rows": [
+              {
+                "label": "Refresh rate",
+                "left": "Real-time",
+                "right": "Manual"
+              },
+              {
+                "label": "Alerts",
+                "left": "Automatic",
+                "right": "None"
+              },
+              {
+                "label": "Collaboration",
+                "left": "Built-in",
+                "right": "Email"
+              }
+            ]
+          },
+          {
+            "id": "sec_demo_product_5",
+            "sourceSlideIndexes": [],
+            "type": "cta",
+            "title": "Start your free trial",
+            "description": "No credit card required. Set up in minutes.",
+            "primaryLabel": "Try Pulse free",
+            "secondaryLabel": "Book a demo"
+          }
+        ],
+        "suggestions": []
+      },
+      "isDemo": true,
+      "demoMeta": {
+        "key": "product",
+        "theme": "Modern SaaS",
+        "title": {
+          "zh-CN": "产品发布 Web Deck",
+          "en": "Product Launch Web Deck"
+        },
+        "description": {
+          "zh-CN": "用 Hero、功能卡片、对比与有力的 CTA 发布一款产品。",
+          "en": "Announce a product with a hero, feature cards, comparison, and a strong CTA."
+        }
+      }
+    },
+    {
+      "id": "proj_demo_investor",
+      "name": "Investor Pitch Web Deck",
+      "sourceFileName": "investor-demo.pptx",
+      "createdAt": "2024-12-03T00:00:00.000Z",
+      "updatedAt": "2024-12-03T01:00:00.000Z",
+      "status": "generated",
+      "slides": [],
+      "webDeck": {
+        "id": "deck_demo_investor",
+        "title": "Investor Pitch Web Deck",
+        "subtitle": "A fundraising narrative with market charts, traction, and the ask.",
+        "theme": {
+          "id": "dark-executive",
+          "colors": {}
+        },
+        "mode": "enhanced",
+        "motion": {
+          "preset": "scale",
+          "transition": "zoom"
+        },
+        "sections": [
+          {
+            "id": "sec_demo_investor_1",
+            "sourceSlideIndexes": [],
+            "type": "hero",
+            "title": "Ferry — the future of urban logistics",
+            "subtitle": "Seed round · $4M target",
+            "eyebrow": "Investor Pitch",
+            "layout": "centered"
+          },
+          {
+            "id": "sec_demo_investor_2",
+            "sourceSlideIndexes": [],
+            "type": "chart",
+            "title": "Market size",
+            "chartType": "line",
+            "layout": "chart-with-insight",
+            "insight": "Our addressable market is compounding at 22% annually.",
+            "data": {
+              "columns": [
+                "Year",
+                "TAM"
+              ],
+              "rows": [
+                {
+                  "Year": "2023",
+                  "TAM": 12
+                },
+                {
+                  "Year": "2024",
+                  "TAM": 15
+                },
+                {
+                  "Year": "2025",
+                  "TAM": 18
+                },
+                {
+                  "Year": "2026",
+                  "TAM": 23
+                }
+              ]
+            },
+            "config": {
+              "xKey": "Year",
+              "yKeys": [
+                "TAM"
+              ],
+              "showLegend": false,
+              "showGrid": true
+            }
+          },
+          {
+            "id": "sec_demo_investor_3",
+            "sourceSlideIndexes": [],
+            "type": "cards",
+            "title": "Traction",
+            "layout": "grid",
+            "cards": [
+              {
+                "title": "$1.2M ARR",
+                "description": "Up 4x year over year."
+              },
+              {
+                "title": "18 cities",
+                "description": "Live across three regions."
+              },
+              {
+                "title": "92% retention",
+                "description": "Net revenue retention."
+              }
+            ]
+          },
+          {
+            "id": "sec_demo_investor_4",
+            "sourceSlideIndexes": [],
+            "type": "chart",
+            "title": "Use of funds",
+            "chartType": "donut",
+            "layout": "card",
+            "data": {
+              "columns": [
+                "Area",
+                "Percent"
+              ],
+              "rows": [
+                {
+                  "Area": "Engineering",
+                  "Percent": 45
+                },
+                {
+                  "Area": "Go-to-market",
+                  "Percent": 35
+                },
+                {
+                  "Area": "Operations",
+                  "Percent": 20
+                }
+              ]
+            },
+            "config": {
+              "xKey": "Area",
+              "yKeys": [
+                "Percent"
+              ],
+              "showLegend": true
+            }
+          },
+          {
+            "id": "sec_demo_investor_5",
+            "sourceSlideIndexes": [],
+            "type": "quote",
+            "title": "Why now",
+            "quote": "Cities are re-regulating curb space — the winners will own the software layer.",
+            "author": "Ferry founding thesis"
+          },
+          {
+            "id": "sec_demo_investor_6",
+            "sourceSlideIndexes": [],
+            "type": "cta",
+            "title": "The ask",
+            "description": "$4M to reach 50 cities and $5M ARR in 18 months.",
+            "primaryLabel": "Request data room"
+          }
+        ],
+        "suggestions": []
+      },
+      "isDemo": true,
+      "demoMeta": {
+        "key": "investor",
+        "theme": "Dark Executive",
+        "title": {
+          "zh-CN": "投资路演 Web Deck",
+          "en": "Investor Pitch Web Deck"
+        },
+        "description": {
+          "zh-CN": "融资叙事，包含市场图表、增长数据与融资诉求。",
+          "en": "A fundraising narrative with market charts, traction, and the ask."
+        }
+      }
+    },
+    {
+      "id": "proj_demo_annual",
+      "name": "Annual Review Web Deck",
+      "sourceFileName": "annual-demo.pptx",
+      "createdAt": "2024-12-04T00:00:00.000Z",
+      "updatedAt": "2024-12-04T01:00:00.000Z",
+      "status": "generated",
+      "slides": [],
+      "webDeck": {
+        "id": "deck_demo_annual",
+        "title": "Annual Review Web Deck",
+        "subtitle": "Year-in-review with KPIs, a results chart, and a gallery of milestones.",
+        "theme": {
+          "id": "editorial",
+          "colors": {}
+        },
+        "mode": "enhanced",
+        "motion": {
+          "preset": "stagger",
+          "transition": "fade"
+        },
+        "sections": [
+          {
+            "id": "sec_demo_annual_1",
+            "sourceSlideIndexes": [],
+            "type": "hero",
+            "title": "2024 in review",
+            "subtitle": "A year of steady, deliberate growth.",
+            "eyebrow": "Annual Review",
+            "layout": "metrics",
+            "metrics": [
+              {
+                "value": "+41%",
+                "label": "Revenue"
+              },
+              {
+                "value": "+12",
+                "label": "Team members"
+              },
+              {
+                "value": "99.98%",
+                "label": "Uptime"
+              }
+            ]
+          },
+          {
+            "id": "sec_demo_annual_2",
+            "sourceSlideIndexes": [],
+            "type": "chart",
+            "title": "Quarterly results",
+            "chartType": "bar",
+            "layout": "full-width",
+            "data": {
+              "columns": [
+                "Quarter",
+                "Revenue",
+                "Profit"
+              ],
+              "rows": [
+                {
+                  "Quarter": "Q1",
+                  "Revenue": 30,
+                  "Profit": 6
+                },
+                {
+                  "Quarter": "Q2",
+                  "Revenue": 38,
+                  "Profit": 9
+                },
+                {
+                  "Quarter": "Q3",
+                  "Revenue": 45,
+                  "Profit": 12
+                },
+                {
+                  "Quarter": "Q4",
+                  "Revenue": 52,
+                  "Profit": 16
+                }
+              ]
+            },
+            "config": {
+              "xKey": "Quarter",
+              "yKeys": [
+                "Revenue",
+                "Profit"
+              ],
+              "showLegend": true,
+              "showGrid": true
+            }
+          },
+          {
+            "id": "sec_demo_annual_3",
+            "sourceSlideIndexes": [],
+            "type": "gallery",
+            "title": "Moments from the year",
+            "layout": "grid",
+            "images": [
+              {
+                "url": "https://picsum.photos/seed/team1/1200/700",
+                "alt": "Team offsite",
+                "caption": "Spring offsite"
+              },
+              {
+                "url": "https://picsum.photos/seed/launch/1200/700",
+                "alt": "Launch event",
+                "caption": "Product launch"
+              },
+              {
+                "url": "https://picsum.photos/seed/award/1200/700",
+                "alt": "Award ceremony",
+                "caption": "Industry award"
+              }
+            ]
+          },
+          {
+            "id": "sec_demo_annual_4",
+            "sourceSlideIndexes": [],
+            "type": "timeline",
+            "title": "Highlights",
+            "items": [
+              {
+                "time": "Mar",
+                "title": "Raised Series A"
+              },
+              {
+                "time": "Jul",
+                "title": "Launched v3"
+              },
+              {
+                "time": "Nov",
+                "title": "Opened EMEA office"
+              }
+            ]
+          },
+          {
+            "id": "sec_demo_annual_5",
+            "sourceSlideIndexes": [],
+            "type": "cta",
+            "title": "Onward to 2025",
+            "description": "Thank you to our team, customers, and partners.",
+            "primaryLabel": "Read the full report"
+          }
+        ],
+        "suggestions": []
+      },
+      "isDemo": true,
+      "demoMeta": {
+        "key": "annual",
+        "theme": "Editorial",
+        "title": {
+          "zh-CN": "年度回顾 Web Deck",
+          "en": "Annual Review Web Deck"
+        },
+        "description": {
+          "zh-CN": "年度总结，包含核心 KPI、业绩图表与里程碑图库。",
+          "en": "Year-in-review with KPIs, a results chart, and a gallery of milestones."
+        }
+      }
+    },
+    {
+      "id": "proj_demo_training",
+      "name": "Training Course Web Deck",
+      "sourceFileName": "training-demo.pptx",
+      "createdAt": "2024-12-05T00:00:00.000Z",
+      "updatedAt": "2024-12-05T01:00:00.000Z",
+      "status": "generated",
+      "slides": [],
+      "webDeck": {
+        "id": "deck_demo_training",
+        "title": "Training Course Web Deck",
+        "subtitle": "A course outline with agenda, module cards, an FAQ, and next steps.",
+        "theme": {
+          "id": "minimal-white",
+          "colors": {}
+        },
+        "mode": "enhanced",
+        "motion": {
+          "preset": "none",
+          "transition": "none"
+        },
+        "sections": [
+          {
+            "id": "sec_demo_training_1",
+            "sourceSlideIndexes": [],
+            "type": "hero",
+            "title": "Foundations of Data Analysis",
+            "subtitle": "A four-module course for analysts and PMs.",
+            "eyebrow": "Training Course",
+            "layout": "centered"
+          },
+          {
+            "id": "sec_demo_training_2",
+            "sourceSlideIndexes": [],
+            "type": "agenda",
+            "title": "Course agenda",
+            "items": [
+              {
+                "label": "Module 1",
+                "description": "Framing the question."
+              },
+              {
+                "label": "Module 2",
+                "description": "Cleaning and shaping data."
+              },
+              {
+                "label": "Module 3",
+                "description": "Visualizing findings."
+              },
+              {
+                "label": "Module 4",
+                "description": "Telling the story."
+              }
+            ]
+          },
+          {
+            "id": "sec_demo_training_3",
+            "sourceSlideIndexes": [],
+            "type": "cards",
+            "title": "What you'll learn",
+            "layout": "grid",
+            "cards": [
+              {
+                "title": "Ask better questions",
+                "description": "Turn vague asks into testable hypotheses."
+              },
+              {
+                "title": "Trust your data",
+                "description": "Validate before you visualize."
+              },
+              {
+                "title": "Communicate clearly",
+                "description": "Charts that persuade, not confuse."
+              }
+            ]
+          },
+          {
+            "id": "sec_demo_training_4",
+            "sourceSlideIndexes": [],
+            "type": "faq",
+            "title": "Frequently asked",
+            "layout": "accordion",
+            "items": [
+              {
+                "question": "Do I need coding experience?",
+                "answer": "No — we use spreadsheets and a no-code tool."
+              },
+              {
+                "question": "How long is the course?",
+                "answer": "About six hours across four modules."
+              },
+              {
+                "question": "Is there a certificate?",
+                "answer": "Yes, on completion of the final project."
+              }
+            ]
+          },
+          {
+            "id": "sec_demo_training_5",
+            "sourceSlideIndexes": [],
+            "type": "cta",
+            "title": "Enroll today",
+            "description": "Next cohort starts the first Monday of the month.",
+            "primaryLabel": "Reserve a seat"
+          }
+        ],
+        "suggestions": []
+      },
+      "isDemo": true,
+      "demoMeta": {
+        "key": "training",
+        "theme": "Minimal White",
+        "title": {
+          "zh-CN": "培训课程 Web Deck",
+          "en": "Training Course Web Deck"
+        },
+        "description": {
+          "zh-CN": "课程大纲，包含议程、模块卡片、FAQ 与后续步骤。",
+          "en": "A course outline with agenda, module cards, an FAQ, and next steps."
+        }
+      }
+    }
+  ]
+}

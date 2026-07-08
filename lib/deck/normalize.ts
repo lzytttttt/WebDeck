@@ -52,9 +52,25 @@ function normalizeMotion(raw: unknown): DeckMotion {
 // Guard against runtime shapes that would blank the preview. We keep the
 // section as-is (the renderer tolerates missing optional fields) but ensure
 // the always-required identity fields exist.
+const VALID_SECTION_TYPES = new Set([
+  "hero",
+  "agenda",
+  "slide",
+  "cards",
+  "timeline",
+  "comparison",
+  "faq",
+  "quote",
+  "cta",
+  "image",
+  "gallery",
+  "chart",
+]);
+
 function normalizeSection(raw: unknown, i: number): DeckSection | null {
   if (!isRecord(raw)) return null;
   if (typeof raw.type !== "string") return null;
+  if (!VALID_SECTION_TYPES.has(raw.type)) return null;
   const base = {
     ...raw,
     id: typeof raw.id === "string" && raw.id ? raw.id : `sec_${i}`,

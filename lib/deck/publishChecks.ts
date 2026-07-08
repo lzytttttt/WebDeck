@@ -1,38 +1,14 @@
 import type { WebDeck, DeckSection } from "@/types/deck";
 import type { PublishCheck } from "@/types/checks";
 import { exportStaticHtml } from "@/lib/export/exportStaticHtml";
+import { getSection } from "@/lib/deck/sections";
 
 // Does a section carry any renderable content beyond its title? Empty-section
 // detection needs a per-type notion of "has body".
 function sectionHasContent(s: DeckSection): boolean {
-  switch (s.type) {
-    case "hero":
-      return Boolean(s.subtitle || s.summary || (s.metrics && s.metrics.length));
-    case "agenda":
-      return s.items.length > 0;
-    case "slide":
-      return Boolean(s.body || (s.bullets && s.bullets.length));
-    case "cards":
-      return s.cards.length > 0;
-    case "timeline":
-      return s.items.length > 0;
-    case "comparison":
-      return s.rows.length > 0;
-    case "faq":
-      return s.items.length > 0;
-    case "quote":
-      return Boolean(s.quote);
-    case "cta":
-      return Boolean(s.primaryLabel || s.description);
-    case "image":
-      return Boolean(s.image?.url);
-    case "gallery":
-      return s.images.length > 0;
-    case "chart":
-      return s.data.rows.length > 0;
-    default:
-      return true;
-  }
+  const def = getSection(s.type);
+  if (def) return def.hasContent(s);
+  return true;
 }
 
 // Wide content likely to overflow a 390px mobile viewport: comparison tables

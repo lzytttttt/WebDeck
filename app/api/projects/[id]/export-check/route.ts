@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getProject } from "@/lib/storage/projectStore";
+import { getProject } from "@/lib/storage/projectRepo";
+import { ensureDb } from "@/lib/storage/db";
 import { normalizeDeck } from "@/lib/deck/normalize";
 import { computeExportCheck } from "@/lib/deck/exportCheck";
 
@@ -10,6 +11,7 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: { id: string } },
 ) {
+  await ensureDb();
   const project = await getProject(params.id);
   if (!project) {
     return NextResponse.json({ error: "项目不存在" }, { status: 404 });

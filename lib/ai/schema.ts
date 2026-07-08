@@ -6,25 +6,17 @@ import type {
 } from "@/types/deck";
 import { DEFAULT_MOTION } from "@/types/deck";
 import { getThemeById } from "@/lib/deck/theme";
+import { getAllSections } from "@/lib/deck/sections";
+import {
+  WebDeckAIOutputSchema,
+  EnhancementSuggestionSchema,
+} from "@/lib/schema/sections";
 
 // Lightweight structural validation for AI-returned JSON. We do not pull in
 // a schema lib for the MVP; these guards are enough to reject malformed
 // output and trigger the Mock fallback.
 
-const SECTION_TYPES = new Set([
-  "hero",
-  "agenda",
-  "slide",
-  "cards",
-  "timeline",
-  "comparison",
-  "faq",
-  "quote",
-  "cta",
-  "image",
-  "gallery",
-  "chart",
-]);
+const SECTION_TYPES = new Set(getAllSections().map((s) => s.type));
 
 const SUGGESTION_TYPES = new Set<SuggestionType>([
   "split",
@@ -91,6 +83,50 @@ export function validateWebDeck(v: unknown): WebDeck | null {
     sections,
     suggestions,
   };
+}
+
+// Zod-based validation: validates AI output against the relaxed schema,
+// then applies business-logic defaults. Returns null on hard failure.
+export function validateWebDeckWithZod(v: unknown): WebDeck | null {
+  const result = WebDeckAIOutputSchema.safeParse(v);
+  if (!result.success) return null;
+
+  const data = result.data;
+  const themeId = data.theme?.id;
+
+  // The relaxed schema accepts sections with generic type:string — filter to
+  // known section types and cast.
+  const sections = data.sections
+    .filter((s) => SECTION_TYPES.has(s.type))
+    .map((s) => s as unknown as DeckSection);
+
+  if (sections.length === 0) return null;
+
+  const suggestions = (data.suggestions ?? [])
+    .filter((s) => SUGGESTION_TYPES.has(s.type as SuggestionType))
+    .map((s) => s as unknown as EnhancementSuggestion);
+
+  return {
+    id: data.id ?? "",
+    title: data.title,
+    subtitle: data.subtitle,
+    theme: getThemeById(themeId),
+    mode: data.mode ?? "conservative",
+    motion: { ...DEFAULT_MOTION },
+    sections,
+    suggestions,
+  };
+}
+
+// Zod-based suggestion validation.
+export function validateSuggestionsWithZod(v: unknown): EnhancementSuggestion[] | null {
+  if (!Array.isArray(v)) return null;
+  const valid: EnhancementSuggestion[] = [];
+  for (const item of v) {
+    const result = EnhancementSuggestionSchema.safeParse(item);
+    if (result.success) valid.push(result.data as EnhancementSuggestion);
+  }
+  return valid.length > 0 ? valid : null;
 }
 
 export function validateSuggestions(v: unknown): EnhancementSuggestion[] | null {

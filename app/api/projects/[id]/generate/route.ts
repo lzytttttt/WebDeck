@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getProject, updateProject } from "@/lib/storage/projectStore";
+import { getProject, updateProject } from "@/lib/storage/projectRepo";
+import { ensureDb } from "@/lib/storage/db";
 import { getAIProvider } from "@/lib/ai/getAIProvider";
 import type { DeckMode, WebDeck } from "@/types/deck";
 
@@ -12,6 +13,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  await ensureDb();
   const project = await getProject(params.id);
   if (!project) {
     return NextResponse.json({ error: "项目不存在" }, { status: 404 });

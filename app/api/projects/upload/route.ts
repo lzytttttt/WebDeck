@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { parsePptx } from "@/lib/pptx/parsePptx";
-import { createProject, saveUpload } from "@/lib/storage/projectStore";
-import { getAIProvider } from "@/lib/ai/getAIProvider";
+import { createProject, saveUpload } from "@/lib/storage/projectRepo";
+import { ensureDb } from "@/lib/storage/db";
 import { buildImportQualityReport } from "@/lib/pptx/importQuality";
 import type { Project } from "@/types/project";
 import { uid } from "@/lib/utils";
@@ -11,6 +11,7 @@ export const runtime = "nodejs";
 const MAX_SIZE = 50 * 1024 * 1024; // 50MB
 
 export async function POST(req: NextRequest) {
+  await ensureDb();
   let form: FormData;
   try {
     form = await req.formData();
@@ -60,16 +61,9 @@ export async function POST(req: NextRequest) {
   const id = uid("proj_");
   const now = new Date().toISOString();
   const filePath = await saveUpload(id, name, buffer);
-
-  // Generate an initial deck (conservative mode) so the editor opens ready.
-  const provider = getAIProvider();
   const projectName = name.replace(/\.pptx$/i, "");
-  const webDeck = await provider.generateWebDeck({
-    projectName,
-    slides,
-    mode: "conservative",
-  });
 
+  // Only parse + store; AI generation is deferred to /api/projects/[id]/generate
   const project: Project = {
     id,
     name: projectName,
@@ -77,9 +71,8 @@ export async function POST(req: NextRequest) {
     sourceFilePath: filePath,
     createdAt: now,
     updatedAt: now,
-    status: "generated",
+    status: "parsed",
     slides,
-    webDeck,
     importQualityReport: buildImportQualityReport(slides),
   };
 

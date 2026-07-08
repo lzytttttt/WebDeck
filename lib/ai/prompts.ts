@@ -2,6 +2,8 @@ import type { ParsedSlide } from "@/types/project";
 import type { DeckMode } from "@/types/deck";
 
 // The system prompt pins the model to strict JSON matching our WebDeck shape.
+// This schema description mirrors the Zod definitions in lib/schema/sections.ts
+// so the AI output is structurally validatable by WebDeckAIOutputSchema.
 export const WEB_DECK_SYSTEM_PROMPT = `You are a presentation-to-web conversion engine. You transform parsed PowerPoint slides into an interactive "Web Deck" represented as strict JSON.
 
 Rules:

@@ -6,9 +6,8 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function uid(prefix = ""): string {
-  const rand = Math.random().toString(36).slice(2, 10);
-  const time = Date.now().toString(36);
-  return `${prefix}${time}${rand}`;
+  const id = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+  return `${prefix}${id}`;
 }
 
 // Locale-aware short date. Used by dashboard/demo cards. zh-CN and en both
