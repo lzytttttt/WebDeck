@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import {
   Pencil,
@@ -77,14 +78,7 @@ export function ProjectCard({
             <Share2 className="h-3.5 w-3.5" />
           </CardAction>
         ) : null}
-        <a
-          href={`/api/projects/${project.id}/export-html`}
-          download
-          title={t.common.exportHtml}
-          className="flex items-center justify-center rounded-md border px-2 py-1.5 text-xs text-foreground hover:bg-secondary"
-        >
-          <Download className="h-3.5 w-3.5" />
-        </a>
+        <ExportDropdown projectId={project.id} t={t} />
         <button
           onClick={onDuplicate}
           disabled={busy}
@@ -123,5 +117,55 @@ function CardAction({
     >
       {children}
     </Link>
+  );
+}
+
+function ExportDropdown({
+  projectId,
+  t,
+}: {
+  projectId: string;
+  t: ReturnType<typeof useI18n>["t"];
+}) {
+  const [open, setOpen] = useState(false);
+
+  const items = [
+    { id: "html", label: t.common.exportHtml },
+    { id: "pdf", label: t.common.exportPdf },
+    { id: "pptx", label: t.common.exportPptx },
+    { id: "markdown", label: t.common.exportMarkdown },
+  ];
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        title={t.common.export}
+        className="flex items-center justify-center rounded-md border px-2 py-1.5 text-xs text-foreground hover:bg-secondary"
+      >
+        <Download className="h-3.5 w-3.5" />
+      </button>
+      {open ? (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setOpen(false)}
+          />
+          <div className="absolute right-0 bottom-full z-50 mb-1 min-w-[140px] rounded-lg border bg-background shadow-lg">
+            {items.map((item) => (
+              <a
+                key={item.id}
+                href={`/api/projects/${projectId}/export-${item.id}`}
+                download
+                onClick={() => setOpen(false)}
+                className="flex w-full items-center px-3 py-2 text-xs text-foreground hover:bg-secondary first:rounded-t-lg last:rounded-b-lg"
+              >
+                {item.label}
+              </a>
+            ))}
+          </div>
+        </>
+      ) : null}
+    </div>
   );
 }

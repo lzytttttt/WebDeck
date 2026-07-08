@@ -1,5 +1,6 @@
 import JSZip from "jszip";
 import { extractSlideText, extractNotesText, countImageRefs, countTableRefs } from "./extractSlideText";
+import { extractSlideImages } from "./extractImages";
 import type { ExtractedSlide } from "./types";
 import type { ParsedSlide } from "@/types/project";
 import { uid } from "@/lib/utils";
@@ -51,12 +52,17 @@ export async function extractSlides(buffer: Buffer | ArrayBuffer): Promise<Extra
     // Notes file numbering does not strictly track slide order, but the
     // common 1:1 case (notesSlideN <-> slideN) is handled by index N.
     const notes = notesByIndex.get(slideNumber(path));
+
+    // Extract images referenced by this slide from the PPTX media directory.
+    const slideImages = await extractSlideImages(zip, xml, slideNumber(path));
+
     slides.push({
       index: i,
       blocks,
       notes,
       imageRefCount: countImageRefs(xml),
       tableRefCount: countTableRefs(xml),
+      images: slideImages,
     });
   }
 
@@ -95,6 +101,15 @@ export function toParsedSlides(extracted: ExtractedSlide[]): ParsedSlide[] {
       notes: slide.notes,
       imageRefCount: slide.imageRefCount,
       tableRefCount: slide.tableRefCount,
+      images: slide.images.map((img, imgIdx) => ({
+        id: uid("img_"),
+        name: img.fileName,
+        data: img.data,
+        mimeType: img.mimeType,
+        width: img.width,
+        height: img.height,
+        alt: `Slide ${slide.index} image ${imgIdx + 1}`,
+      })),
     };
   });
 }

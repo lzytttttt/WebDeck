@@ -3,9 +3,40 @@
 import type { WebDeck, DeckSection, DeckTheme } from "@/types/deck";
 import { getSection } from "@/lib/deck/sections";
 import { EditProvider, useMaybeEdit, type EditContextValue } from "./EditContext";
-import { themeToCssVars } from "@/lib/deck/theme";
+import { themeToCssVars, getGoogleFontsUrl, buildCustomCss } from "@/lib/deck/theme";
 import { cn } from "@/lib/utils";
 import { SectionErrorBoundary } from "@/components/ErrorBoundary";
+import { useEffect } from "react";
+
+/**
+ * Injects a Google Fonts <link> and a <style> tag for customCss into
+ * document.head.  Both are cleaned up on unmount.
+ */
+function ThemeExtras({ theme }: { theme: DeckTheme }) {
+  const fontsUrl = getGoogleFontsUrl(theme);
+  const customCss = buildCustomCss(theme);
+
+  useEffect(() => {
+    if (!fontsUrl) return;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = fontsUrl;
+    link.dataset.deckFonts = "true";
+    document.head.appendChild(link);
+    return () => { link.remove(); };
+  }, [fontsUrl]);
+
+  useEffect(() => {
+    if (!customCss) return;
+    const style = document.createElement("style");
+    style.textContent = customCss;
+    style.dataset.deckCustomCss = "true";
+    document.head.appendChild(style);
+    return () => { style.remove(); };
+  }, [customCss]);
+
+  return null;
+}
 
 export function SectionSwitch({ section }: { section: DeckSection }) {
   const def = getSection(section.type);
@@ -87,6 +118,7 @@ export function DeckRenderer({
       className={cn("deck-root w-full", className)}
       style={themeToCssVars(deck.theme) as React.CSSProperties}
     >
+      <ThemeExtras theme={deck.theme} />
       {deck.sections.map((section, i) => (
         <SectionErrorBoundary key={section.id} sectionId={section.id}>
           <SectionWrapper

@@ -14,4 +14,14 @@ export type ExtractedSlide = {
   notes?: string;
   imageRefCount: number;
   tableRefCount: number;
+  images: ExtractedImage[];
+};
+
+// An image extracted from the PPTX ZIP media directory.
+export type ExtractedImage = {
+  data: string;       // base64 data URI (data:mime;base64,...)
+  mimeType: string;   // e.g. "image/png"
+  fileName: string;   // original media file name (e.g. "image1.png")
+  width?: number;
+  height?: number;
 };

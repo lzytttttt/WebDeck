@@ -33,6 +33,10 @@ export type DeckTheme = {
   radius: ThemeRadius;
   shadow: ThemeShadow;
   spacing: ThemeSpacing;
+  /** Additional Google Fonts to load (beyond the fonts implied by typography). */
+  customFonts?: Array<{ family: string; url: string }>;
+  /** Arbitrary CSS injected into the deck root. Scoped via .deck-root wrapper. */
+  customCss?: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -145,11 +149,14 @@ export type CTASection = BaseSection & {
 };
 
 export type ImageLayout = "full-width" | "split-left" | "split-right" | "framed";
+export type SlideImageRef = { slideIndex: number; imageIndex: number };
+
 export type ImageSection = BaseSection & {
   type: "image";
   image: {
     assetId?: string;
     url: string;
+    slideImageRef?: SlideImageRef;
     alt?: string;
     caption?: string;
     focalPoint?: { x: number; y: number };
@@ -165,6 +172,7 @@ export type GalleryLayout = "grid" | "carousel" | "masonry";
 export type GalleryImage = {
   assetId?: string;
   url: string;
+  slideImageRef?: SlideImageRef;
   alt?: string;
   caption?: string;
 };

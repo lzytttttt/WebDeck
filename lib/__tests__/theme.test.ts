@@ -5,6 +5,11 @@ import {
   getThemeById,
   BUILTIN_THEMES,
   DEFAULT_THEME,
+  GOOGLE_FONTS_PRESET,
+  getGoogleFontsUrl,
+  exportTheme,
+  importTheme,
+  buildCustomCss,
 } from "@/lib/deck/theme";
 import type { DeckTheme } from "@/types/deck";
 
@@ -112,5 +117,139 @@ describe("cssVarsToString", () => {
     const str = cssVarsToString(vars);
     expect(str).toContain("--deck-bg:");
     expect(str).toContain("--deck-primary:");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GOOGLE_FONTS_PRESET
+// ---------------------------------------------------------------------------
+
+describe("GOOGLE_FONTS_PRESET", () => {
+  it("contains at least 10 entries", () => {
+    expect(GOOGLE_FONTS_PRESET.length).toBeGreaterThanOrEqual(10);
+  });
+
+  it("contains popular fonts like Inter and Roboto", () => {
+    expect(GOOGLE_FONTS_PRESET).toContain("Inter");
+    expect(GOOGLE_FONTS_PRESET).toContain("Roboto");
+    expect(GOOGLE_FONTS_PRESET).toContain("Poppins");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getGoogleFontsUrl
+// ---------------------------------------------------------------------------
+
+describe("getGoogleFontsUrl", () => {
+  it("returns a URL for themes with Google Fonts", () => {
+    const theme: DeckTheme = {
+      ...DEFAULT_THEME,
+      typography: {
+        headingFont: "'Inter', sans-serif",
+        bodyFont: "'Roboto', sans-serif",
+        scale: "normal",
+      },
+    };
+    const url = getGoogleFontsUrl(theme);
+    expect(url).toBeTruthy();
+    expect(url).toContain("fonts.googleapis.com");
+    expect(url).toContain("Inter");
+    expect(url).toContain("Roboto");
+    expect(url).toContain("display=swap");
+  });
+
+  it("returns undefined for system-font themes", () => {
+    // DEFAULT_THEME uses system fonts
+    const url = getGoogleFontsUrl(DEFAULT_THEME);
+    expect(url).toBeUndefined();
+  });
+
+  it("includes customFonts families", () => {
+    const theme: DeckTheme = {
+      ...DEFAULT_THEME,
+      customFonts: [{ family: "Fira Code", url: "https://example.com" }],
+    };
+    const url = getGoogleFontsUrl(theme);
+    expect(url).toBeTruthy();
+    expect(url).toContain("Fira%20Code");
+  });
+
+  it("deduplicates font families", () => {
+    const theme: DeckTheme = {
+      ...DEFAULT_THEME,
+      typography: {
+        headingFont: "'Inter', sans-serif",
+        bodyFont: "'Inter', sans-serif",
+        scale: "normal",
+      },
+    };
+    const url = getGoogleFontsUrl(theme);
+    // "Inter" should appear only once
+    const matches = url!.match(/family=Inter/g);
+    expect(matches?.length).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// exportTheme / importTheme
+// ---------------------------------------------------------------------------
+
+describe("exportTheme / importTheme", () => {
+  it("roundtrips a complete theme", () => {
+    const theme: DeckTheme = {
+      ...DEFAULT_THEME,
+      customCss: "--deck-accent: red;",
+      customFonts: [{ family: "Fira Code", url: "https://example.com" }],
+    };
+    const json = exportTheme(theme);
+    expect(typeof json).toBe("string");
+    const parsed = importTheme(json);
+    expect(parsed).not.toBeNull();
+    expect(parsed!.id).toBe(theme.id);
+    expect(parsed!.customCss).toBe("--deck-accent: red;");
+    expect(parsed!.customFonts).toHaveLength(1);
+  });
+
+  it("returns null for invalid JSON", () => {
+    expect(importTheme("not json")).toBeNull();
+    expect(importTheme("{}")).toBeNull(); // missing required fields
+  });
+
+  it("returns null for non-object input", () => {
+    expect(importTheme('"hello"')).toBeNull();
+    expect(importTheme("null")).toBeNull();
+  });
+
+  it("preserves all builtin theme properties", () => {
+    for (const theme of BUILTIN_THEMES) {
+      const json = exportTheme(theme);
+      const parsed = importTheme(json);
+      expect(parsed).not.toBeNull();
+      expect(parsed!.id).toBe(theme.id);
+      expect(parsed!.name).toBe(theme.name);
+      expect(parsed!.colors).toEqual(theme.colors);
+      expect(parsed!.typography).toEqual(theme.typography);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildCustomCss
+// ---------------------------------------------------------------------------
+
+describe("buildCustomCss", () => {
+  it("returns undefined when customCss is empty", () => {
+    expect(buildCustomCss(DEFAULT_THEME)).toBeUndefined();
+  });
+
+  it("returns undefined when customCss is whitespace", () => {
+    const theme: DeckTheme = { ...DEFAULT_THEME, customCss: "   " };
+    expect(buildCustomCss(theme)).toBeUndefined();
+  });
+
+  it("returns the customCss string when present", () => {
+    const css = ".hero h1 { color: red; }";
+    const theme: DeckTheme = { ...DEFAULT_THEME, customCss: css };
+    expect(buildCustomCss(theme)).toBe(css);
   });
 });

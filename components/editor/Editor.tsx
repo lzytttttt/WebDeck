@@ -40,16 +40,79 @@ function isPublishResponse(v: unknown): v is PublishResponse {
 }
 
 /** Loading screen shown while AI generates the initial deck. */
-function GeneratingOverlay({ message }: { message: string }) {
+function GeneratingOverlay({
+  message,
+  progress,
+  error,
+  onRetry,
+}: {
+  message: string;
+  progress: number;
+  error: string | null;
+  onRetry: () => void;
+}) {
+  if (error) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-4">
+        <p className="text-lg font-medium text-destructive">{error}</p>
+        <Button onClick={onRetry}>重试</Button>
+        <Link href="/projects" className="text-sm text-muted-foreground hover:text-foreground">
+          ← 返回项目列表
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen flex-col items-center justify-center gap-4">
       <div className="h-10 w-10 animate-spin rounded-full border-4 border-accent border-t-transparent" />
       <p className="text-lg font-medium text-foreground">{message}</p>
-      <p className="text-sm text-muted-foreground">
-        AI 正在将您的 PPT 转换为交互式网页…
-      </p>
+      <div className="w-64">
+        <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
+          <span>AI 正在将您的 PPT 转换为交互式网页…</span>
+          <span>{progress}%</span>
+        </div>
+        <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+          <div
+            className="h-full rounded-full bg-accent transition-all duration-500 ease-out"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
     </div>
   );
+}
+
+/** Poll a job until it completes or fails. Returns the result. */
+function pollJob(
+  jobId: string,
+  onProgress: (p: number) => void,
+): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/jobs/${jobId}`);
+        if (!res.ok) throw new Error("Failed to poll job");
+        const data = (await res.json()) as {
+          status: string;
+          progress: number;
+          result?: unknown;
+          error?: string;
+        };
+        onProgress(data.progress);
+        if (data.status === "completed") {
+          resolve(data.result);
+        } else if (data.status === "failed") {
+          reject(new Error(data.error || "Generation failed"));
+        } else {
+          setTimeout(poll, 2000);
+        }
+      } catch (err) {
+        reject(err);
+      }
+    };
+    poll();
+  });
 }
 
 export function Editor({ project }: { project: Project }) {
@@ -60,20 +123,27 @@ export function Editor({ project }: { project: Project }) {
   const [generatedDeck, setGeneratedDeck] = useState<WebDeck | null>(null);
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [generateProgress, setGenerateProgress] = useState(0);
 
   const triggerGenerate = useCallback(async () => {
     setGenerating(true);
     setGenerateError(null);
+    setGenerateProgress(0);
     try {
+      // Step 1: kick off async job
       const res = await fetch(`/api/projects/${project.id}/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mode: "conservative", regenerate: true }),
       });
-      if (!res.ok) throw new Error("Generation failed");
-      const updated: Project = await res.json();
-      if (updated.webDeck) {
-        setGeneratedDeck(updated.webDeck);
+      if (!res.ok) throw new Error("Generation failed to start");
+      const { jobId } = (await res.json()) as { jobId: string; status: string };
+
+      // Step 2: poll for completion
+      const result = await pollJob(jobId, setGenerateProgress);
+      const projectResult = result as Project;
+      if (projectResult.webDeck) {
+        setGeneratedDeck(projectResult.webDeck);
       } else {
         setGenerateError("生成失败，请重试");
       }
@@ -92,20 +162,14 @@ export function Editor({ project }: { project: Project }) {
 
   // Show loading/error state for projects that need generation
   if (needsGeneration && !generatedDeck) {
-    if (generateError) {
-      return (
-        <div className="flex h-screen flex-col items-center justify-center gap-4">
-          <p className="text-lg font-medium text-destructive">{generateError}</p>
-          <Button onClick={triggerGenerate} disabled={generating}>
-            {generating ? "生成中…" : "重试"}
-          </Button>
-          <Link href="/projects" className="text-sm text-muted-foreground hover:text-foreground">
-            ← 返回项目列表
-          </Link>
-        </div>
-      );
-    }
-    return <GeneratingOverlay message="正在生成 Web Deck…" />;
+    return (
+      <GeneratingOverlay
+        message="正在生成 Web Deck…"
+        progress={generateProgress}
+        error={generateError}
+        onRetry={triggerGenerate}
+      />
+    );
   }
 
   return <EditorInner project={project} overrideDeck={generatedDeck} />;
@@ -165,8 +229,10 @@ function EditorInner({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mode, regenerate: true }),
       });
-      const updated: Project = await res.json();
-      if (updated.webDeck) ed.commit(updated.webDeck);
+      if (!res.ok) throw new Error("Generation failed to start");
+      const { jobId } = (await res.json()) as { jobId: string; status: string };
+      const result = (await pollJob(jobId, () => {})) as Project;
+      if (result.webDeck) ed.commit(result.webDeck);
     } catch {
       setNotice(t.editor.mode.switchFailed);
     } finally {
@@ -312,14 +378,8 @@ function EditorInner({
           >
             {t.common.publish}
           </Button>
-          <div className="flex flex-col items-end gap-0.5">
-            <a href={`/api/projects/${project.id}/export-html`} download>
-              <Button variant="accent" size="sm">
-                {t.nav.exportHtml}
-              </Button>
-            </a>
-            <ExportCheckBadge projectId={project.id} />
-          </div>
+          <ExportMenu projectId={project.id} t={t} />
+          <ExportCheckBadge projectId={project.id} />
           <button
             onClick={() => setShortcutsOpen(true)}
             title={t.shortcuts.title}
@@ -410,6 +470,9 @@ function EditorInner({
             <MediaInspector
               projectId={project.id}
               assets={ed.assets}
+              extractedImages={project.slides.flatMap(
+                (s) => s.images?.map((img) => ({ ...img, slideIndex: s.index })) ?? []
+              )}
               selectedSection={ed.selectedSection}
               onAssetsChange={ed.setAssets}
               onInsertSection={(s: DeckSection) => ed.insertSection(s)}
@@ -442,6 +505,65 @@ function EditorInner({
 
       {shortcutsOpen ? (
         <ShortcutsModal onClose={() => setShortcutsOpen(false)} />
+      ) : null}
+    </div>
+  );
+}
+
+/** Export dropdown menu with HTML, PDF, PPTX, and Markdown options. */
+function ExportMenu({ projectId, t }: { projectId: string; t: ReturnType<typeof useI18n>["t"] }) {
+  const [open, setOpen] = useState(false);
+  const [exporting, setExporting] = useState<string | null>(null);
+
+  const handleExport = (format: string) => {
+    setExporting(format);
+    setOpen(false);
+    // Trigger download via hidden link click
+    const a = document.createElement("a");
+    a.href = `/api/projects/${projectId}/export-${format}`;
+    a.download = "";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    // Reset after a short delay (the browser handles the actual download)
+    setTimeout(() => setExporting(null), 2000);
+  };
+
+  const items = [
+    { id: "html", label: t.common.exportHtml },
+    { id: "pdf", label: t.common.exportPdf },
+    { id: "pptx", label: t.common.exportPptx },
+    { id: "markdown", label: t.common.exportMarkdown },
+  ];
+
+  return (
+    <div className="relative">
+      <Button
+        variant="accent"
+        size="sm"
+        onClick={() => setOpen((v) => !v)}
+        disabled={exporting !== null}
+      >
+        {exporting ? t.common.loading : t.common.export} ▾
+      </Button>
+      {open ? (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setOpen(false)}
+          />
+          <div className="absolute right-0 top-full z-50 mt-1 min-w-[160px] rounded-lg border bg-background shadow-lg">
+            {items.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => handleExport(item.id)}
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-secondary first:rounded-t-lg last:rounded-b-lg"
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </>
       ) : null}
     </div>
   );

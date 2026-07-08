@@ -1,5 +1,5 @@
 import type { WebDeck, DeckSection } from "@/types/deck";
-import { themeToCssVars, cssVarsToString, getThemeById } from "@/lib/deck/theme";
+import { themeToCssVars, cssVarsToString, getThemeById, getGoogleFontsUrl, buildCustomCss } from "@/lib/deck/theme";
 import { getSection } from "@/lib/deck/sections";
 import { esc } from "@/lib/deck/htmlUtils";
 
@@ -126,8 +126,13 @@ export type ExportMeta = {
 };
 
 export function exportStaticHtml(deck: WebDeck, meta: ExportMeta = {}): string {
-  const theme = getThemeById(deck.theme?.id);
+  // Preserve custom theme fields (customFonts, customCss) when present.
+  const theme = deck.theme?.customFonts || deck.theme?.customCss
+    ? deck.theme
+    : getThemeById(deck.theme?.id);
   const themeStyle = cssVarsToString(themeToCssVars(theme));
+  const googleFontsUrl = getGoogleFontsUrl(theme);
+  const customCss = buildCustomCss(theme);
   const generatedAt = new Date().toISOString();
   const description =
     meta.description ?? deck.subtitle ?? "An interactive web deck created with Web Deck.";
@@ -156,6 +161,8 @@ ${meta.projectId ? `<meta name="web-deck:source-project" content="${esc(meta.pro
 <meta name="web-deck:generated-at" content="${generatedAt}"/>
 <title>${esc(deck.title)}</title>
 <style>${STYLE}</style>
+${googleFontsUrl ? `<link rel="stylesheet" href="${googleFontsUrl}"/>` : ""}
+${customCss ? `<style>${customCss}</style>` : ""}
 </head>
 <body style="${themeStyle}">
 <div class="wrap">

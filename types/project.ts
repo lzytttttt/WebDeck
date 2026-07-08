@@ -13,7 +13,10 @@ export type Asset = {
 export type SlideImage = {
   id: string;
   name: string;
-  // MVP: images are not extracted into binary; reference-only placeholder.
+  data: string;       // base64 data URI (data:mime;base64,...)
+  mimeType: string;   // e.g. "image/png"
+  width?: number;
+  height?: number;
   alt?: string;
 };
 

@@ -30,6 +30,13 @@ DeckSection is a discriminated union on "type":
 - faq:       { id, type:"faq", sourceSlideIndexes, title, items:{question,answer}[], summary? }
 - quote:     { id, type:"quote", sourceSlideIndexes, title, quote, author?, summary? }
 - cta:       { id, type:"cta", sourceSlideIndexes, title, description?, primaryLabel, secondaryLabel?, summary? }
+- image:     { id, type:"image", sourceSlideIndexes, title, image:{assetId?,url,alt?,caption?,focalPoint?}, content?:{title?,description?}, layout?, summary? }
+- gallery:   { id, type:"gallery", sourceSlideIndexes, title, images:{assetId?,url,alt?,caption?}[], layout?, summary? }
+
+Images from the original PPTX are provided as data URIs in the slide data.
+When creating "image" or "gallery" sections, you can reference these images
+by their data URI. Prefer reusing PPTX images when the content is relevant
+rather than leaving image sections without URLs.
 
 EnhancementSuggestion:
   { id, slideIndex:number, type:"split"|"cards"|"timeline"|"comparison"|"faq"|"cta"|"data-interaction", title, description, actionLabel }
@@ -52,7 +59,17 @@ export function buildWebDeckUserPrompt(
         ? "\n  bullets:\n" + s.bullets.map((b) => `    - ${b}`).join("\n")
         : "";
       const notes = s.notes ? `\n  notes: ${s.notes}` : "";
-      return `- slide ${s.index}:\n  title: ${s.title}${bullets}${notes}`;
+      const imgs =
+        s.images && s.images.length > 0
+          ? "\n  images:\n" +
+            s.images
+              .map(
+                (img, i) =>
+                  `    - [image ${i}] ${img.name} (${img.mimeType}) url: ${img.data}`
+              )
+              .join("\n")
+          : "";
+      return `- slide ${s.index}:\n  title: ${s.title}${bullets}${notes}${imgs}`;
     })
     .join("\n");
 

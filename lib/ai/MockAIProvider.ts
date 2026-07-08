@@ -222,10 +222,18 @@ function buildSuggestions(slides: ParsedSlide[]): EnhancementSuggestion[] {
 
 export class MockAIProvider implements AIProvider {
   readonly name = "mock";
+  readonly capabilities = {
+    streaming: false,
+    maxSlides: 50,
+  };
 
   async generateWebDeck(input: GenerateWebDeckInput): Promise<WebDeck> {
-    const { slides, projectName, mode } = input;
-    return {
+    const { slides, projectName, mode, onProgress } = input;
+    onProgress?.(10);
+    // Simulate small delay for mock to make progress visible
+    await new Promise((r) => setTimeout(r, 300));
+    onProgress?.(50);
+    const deck: WebDeck = {
       id: uid("deck_"),
       title: slides[0]?.title || projectName,
       subtitle: slides[0]?.bullets[0]
@@ -237,6 +245,8 @@ export class MockAIProvider implements AIProvider {
       sections: buildSections(slides, projectName, mode),
       suggestions: buildSuggestions(slides),
     };
+    onProgress?.(90);
+    return deck;
   }
 
   async generateSuggestions(

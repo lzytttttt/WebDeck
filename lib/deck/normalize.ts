@@ -20,6 +20,13 @@ function normalizeTheme(raw: unknown): DeckTheme {
   if (!isRecord(raw)) return DEFAULT_THEME;
   // v0.2 shape already? It has a nested `colors` object.
   if (isRecord(raw.colors) && typeof raw.id === "string") {
+    // Custom themes carry customFonts or customCss — preserve them as-is.
+    if (
+      Array.isArray(raw.customFonts) ||
+      typeof raw.customCss === "string"
+    ) {
+      return raw as DeckTheme;
+    }
     return getThemeById(raw.id);
   }
   // v0.1 flat theme -> map to nearest builtin (default) rather than lose it.

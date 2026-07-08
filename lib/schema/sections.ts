@@ -167,6 +167,12 @@ export const ImageSectionSchema = BaseSectionSchema.extend({
   image: z.object({
     assetId: z.string().optional(),
     url: z.string(),
+    // AI can reference a PPTX-extracted image by slide index + image index
+    // instead of embedding the full data URI. The editor resolves this.
+    slideImageRef: z.object({
+      slideIndex: z.number(),
+      imageIndex: z.number(),
+    }).optional(),
     alt: z.string().optional(),
     caption: z.string().optional(),
     focalPoint: z.object({ x: z.number(), y: z.number() }).optional(),
@@ -184,6 +190,10 @@ export const ImageSectionSchema = BaseSectionSchema.extend({
 export const GalleryImageSchema = z.object({
   assetId: z.string().optional(),
   url: z.string(),
+  slideImageRef: z.object({
+    slideIndex: z.number(),
+    imageIndex: z.number(),
+  }).optional(),
   alt: z.string().optional(),
   caption: z.string().optional(),
 });

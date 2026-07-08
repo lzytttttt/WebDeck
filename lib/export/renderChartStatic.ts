@@ -1,27 +1,26 @@
 import type { ChartSection, ChartData, ChartConfig } from "@/types/deck";
+import {
+  PALETTE,
+  getColorForIndex,
+  toLabel,
+  resolveYKeys,
+  computeBarLayout,
+  computeLineLayout,
+  computePieLayout,
+  computeDonutLayout,
+  computeKpiLayout,
+  computeTableLayout,
+} from "@/lib/chart/core";
 
 // Static, dependency-free chart renderer for the offline HTML export. Mirrors
 // the shapes produced by lib/deck/renderChart.tsx (React) but emits SVG/HTML
 // strings so the exported file needs no JS to draw charts. Colors resolve from
 // the same --deck-* theme vars, so charts follow the exported theme.
+//
+// Layout computation is delegated to lib/chart/core.ts; this module only
+// contains HTML string assembly.
 
-const PALETTE = [
-  "var(--deck-accent)",
-  "var(--deck-primary)",
-  "var(--deck-secondary)",
-  "color-mix(in srgb, var(--deck-accent) 60%, var(--deck-primary))",
-  "color-mix(in srgb, var(--deck-primary) 60%, var(--deck-secondary))",
-  "color-mix(in srgb, var(--deck-secondary) 60%, var(--deck-accent))",
-];
-const color = (i: number): string =>
-  PALETTE[((i % PALETTE.length) + PALETTE.length) % PALETTE.length];
-
-const num = (v: string | number | undefined): number => {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
-};
-const label = (v: string | number | undefined): string =>
-  v === undefined || v === null ? "" : String(v);
+const color = (i: number): string => getColorForIndex(i, PALETTE);
 
 function esc(s: string): string {
   return s
@@ -29,19 +28,6 @@ function esc(s: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
-}
-
-function resolveYKeys(data: ChartData, config: ChartConfig): string[] {
-  if (config.yKeys && config.yKeys.length) return config.yKeys;
-  const xKey = config.xKey ?? data.columns[0];
-  return data.columns.filter((c) => {
-    if (c === xKey) return false;
-    return data.rows.some((r) => Number.isFinite(Number(r[c])));
-  });
-}
-
-function emptyState(): string {
-  return `<div class="chart-empty">暂无数据</div>`;
 }
 
 function legend(items: Array<{ label: string; color: string }>): string {
@@ -55,136 +41,176 @@ function legend(items: Array<{ label: string; color: string }>): string {
     .join("")}</div>`;
 }
 
+function emptyState(): string {
+  return `<div class="chart-empty">暂无数据</div>`;
+}
+
+// ---------------------------------------------------------------------------
+// Shared dimensions
+// ---------------------------------------------------------------------------
+
 const W = 640;
 const H = 320;
 const PAD = { t: 20, r: 20, b: 40, l: 44 };
+const DIMS = { W, H, padL: PAD.l, padR: PAD.r, padT: PAD.t, padB: PAD.b };
 
 function svgOpen(): string {
   return `<svg viewBox="0 0 ${W} ${H}" class="chart-svg" preserveAspectRatio="xMidYMid meet">`;
 }
 
-function grid(config: ChartConfig, maxV: number): string {
-  if (!config.showGrid) return "";
-  const lines: string[] = [];
-  const steps = 4;
-  const innerH = H - PAD.t - PAD.b;
-  for (let i = 0; i <= steps; i += 1) {
-    const y = PAD.t + (innerH * i) / steps;
-    const val = Math.round(maxV - (maxV * i) / steps);
-    lines.push(
-      `<line x1="${PAD.l}" y1="${y}" x2="${W - PAD.r}" y2="${y}" class="chart-grid"/>`,
-      `<text x="${PAD.l - 6}" y="${y + 4}" class="chart-axis" text-anchor="end">${val}</text>`,
-    );
-  }
-  return lines.join("");
-}
+// ---------------------------------------------------------------------------
+// Bar
+// ---------------------------------------------------------------------------
 
-function barChart(data: ChartData, config: ChartConfig, yKeys: string[], xKey: string): string {
-  const innerW = W - PAD.l - PAD.r;
-  const innerH = H - PAD.t - PAD.b;
-  const maxV =
-    Math.max(1, ...data.rows.flatMap((r) => yKeys.map((k) => num(r[k])))) * 1.1;
-  const groupW = innerW / data.rows.length;
-  const barW = Math.max(4, (groupW * 0.7) / yKeys.length);
-  const bars = data.rows
-    .map((r, ri) => {
-      const gx = PAD.l + groupW * ri + groupW * 0.15;
-      const cols = yKeys
-        .map((k, ki) => {
-          const h = (num(r[k]) / maxV) * innerH;
-          const x = gx + barW * ki;
-          const y = PAD.t + innerH - h;
-          return `<rect x="${x}" y="${y}" width="${barW}" height="${Math.max(0, h)}" rx="2" fill="${color(ki)}"/>`;
-        })
-        .join("");
-      const lx = PAD.l + groupW * ri + groupW / 2;
-      return `${cols}<text x="${lx}" y="${H - PAD.b + 16}" class="chart-axis" text-anchor="middle">${esc(
-        label(r[xKey]),
-      )}</text>`;
-    })
-    .join("");
-  const lg = config.showLegend !== false && yKeys.length > 1
-    ? legend(yKeys.map((k, i) => ({ label: k, color: color(i) })))
+function barChart(data: ChartData, config: ChartConfig): string {
+  const layout = computeBarLayout(data, config, DIMS, {
+    maxMultiplier: 1.1,
+    barMinWidth: 4,
+    groupInnerRatio: 0.7,
+    groupLeftPadRatio: 0.15,
+  });
+
+  const rows = data.rows.map((_r, ri) => {
+    const groupBars = layout.bars.filter((b) => b.groupIndex === ri);
+    const labelItem = layout.xAxis[ri];
+    const cols = groupBars
+      .map(
+        (bar) =>
+          `<rect x="${bar.x}" y="${bar.y}" width="${bar.width}" height="${Math.max(0, bar.height)}" rx="2" fill="${color(bar.colorIndex)}"/>`,
+      )
+      .join("");
+    return `${cols}<text x="${labelItem.x}" y="${H - PAD.b + 16}" class="chart-axis" text-anchor="middle">${esc(
+      labelItem.label,
+    )}</text>`;
+  }).join("");
+
+  const grid = config.showGrid
+    ? layout.gridLines
+        .map(
+          (gl) =>
+            `<line x1="${PAD.l}" y1="${gl.y}" x2="${W - PAD.r}" y2="${gl.y}" class="chart-grid"/>` +
+            `<text x="${PAD.l - 6}" y="${gl.y + 4}" class="chart-axis" text-anchor="end">${gl.value}</text>`,
+        )
+        .join("")
     : "";
-  return `${svgOpen()}${grid(config, maxV)}${bars}</svg>${lg}`;
+
+  const yKeys = resolveYKeys(data, config);
+  const lg =
+    config.showLegend !== false && yKeys.length > 1
+      ? legend(yKeys.map((k, i) => ({ label: k, color: color(i) })))
+      : "";
+  return `${svgOpen()}${grid}${rows}</svg>${lg}`;
 }
 
-function lineChart(data: ChartData, config: ChartConfig, yKeys: string[], xKey: string): string {
-  const innerW = W - PAD.l - PAD.r;
-  const innerH = H - PAD.t - PAD.b;
-  const maxV =
-    Math.max(1, ...data.rows.flatMap((r) => yKeys.map((k) => num(r[k])))) * 1.1;
-  const n = data.rows.length;
-  const xAt = (i: number) => PAD.l + (n <= 1 ? innerW / 2 : (innerW * i) / (n - 1));
-  const yAt = (v: number) => PAD.t + innerH - (v / maxV) * innerH;
-  const series = yKeys
-    .map((k, ki) => {
-      const pts = data.rows.map((r, ri) => `${xAt(ri)},${yAt(num(r[k]))}`).join(" ");
-      const dots = data.rows
-        .map((r, ri) => `<circle cx="${xAt(ri)}" cy="${yAt(num(r[k]))}" r="3" fill="${color(ki)}"/>`)
+// ---------------------------------------------------------------------------
+// Line
+// ---------------------------------------------------------------------------
+
+function lineChart(data: ChartData, config: ChartConfig): string {
+  const yKeys = resolveYKeys(data, config);
+  const layout = computeLineLayout(data, config, DIMS, {
+    maxMultiplier: 1.1,
+  });
+
+  const series = layout.series
+    .map((s) => {
+      const dots = s.points
+        .map((p) => `<circle cx="${p.x}" cy="${p.y}" r="3" fill="${color(s.colorIndex)}"/>`)
         .join("");
-      return `<polyline points="${pts}" fill="none" stroke="${color(ki)}" stroke-width="2"/>${dots}`;
+      return `<polyline points="${s.polyline}" fill="none" stroke="${color(s.colorIndex)}" stroke-width="2"/>${dots}`;
     })
     .join("");
-  const labels = data.rows
-    .map((r, ri) => `<text x="${xAt(ri)}" y="${H - PAD.b + 16}" class="chart-axis" text-anchor="middle">${esc(label(r[xKey]))}</text>`)
-    .join("");
-  const lg = config.showLegend !== false && yKeys.length > 1
-    ? legend(yKeys.map((k, i) => ({ label: k, color: color(i) })))
-    : "";
-  return `${svgOpen()}${grid(config, maxV)}${series}${labels}</svg>${lg}`;
-}
 
-function pieChart(data: ChartData, config: ChartConfig, yKeys: string[], xKey: string, donut: boolean): string {
-  const key = yKeys[0];
-  const slices = data.rows.map((r) => ({ label: label(r[xKey]), value: num(r[key]) }));
-  const total = slices.reduce((s, x) => s + x.value, 0) || 1;
-  const cx = H / 2;
-  const cy = H / 2;
-  const rad = H / 2 - 24;
-  let a0 = -Math.PI / 2;
-  const paths = slices
-    .map((s, i) => {
-      const a1 = a0 + (s.value / total) * Math.PI * 2;
-      const x0 = cx + rad * Math.cos(a0);
-      const y0 = cy + rad * Math.sin(a0);
-      const x1 = cx + rad * Math.cos(a1);
-      const y1 = cy + rad * Math.sin(a1);
-      const large = a1 - a0 > Math.PI ? 1 : 0;
-      a0 = a1;
-      return `<path d="M${cx},${cy} L${x0},${y0} A${rad},${rad} 0 ${large} 1 ${x1},${y1} Z" fill="${color(i)}"/>`;
-    })
-    .join("");
-  const hole = donut ? `<circle cx="${cx}" cy="${cy}" r="${rad * 0.55}" fill="var(--deck-surface)"/>` : "";
-  const lg = legend(slices.map((s, i) => ({ label: `${s.label} (${s.value})`, color: color(i) })));
-  return `<svg viewBox="0 0 ${H} ${H}" class="chart-svg chart-pie" preserveAspectRatio="xMidYMid meet">${paths}${hole}</svg>${lg}`;
-}
-
-function kpiCards(data: ChartData, yKeys: string[]): string {
-  const first = data.rows[0] ?? {};
-  const cards = yKeys
+  const labels = layout.xAxis
     .map(
-      (k, i) =>
-        `<div class="kpi-card"><div class="kpi-value" style="color:${color(i)}">${esc(
-          label(first[k]),
-        )}</div><div class="kpi-label">${esc(k)}</div></div>`,
+      (xl) =>
+        `<text x="${xl.x}" y="${H - PAD.b + 16}" class="chart-axis" text-anchor="middle">${esc(xl.label)}</text>`,
+    )
+    .join("");
+
+  const grid = config.showGrid
+    ? layout.gridLines
+        .map(
+          (gl) =>
+            `<line x1="${PAD.l}" y1="${gl.y}" x2="${W - PAD.r}" y2="${gl.y}" class="chart-grid"/>` +
+            `<text x="${PAD.l - 6}" y="${gl.y + 4}" class="chart-axis" text-anchor="end">${gl.value}</text>`,
+        )
+        .join("")
+    : "";
+
+  const lg =
+    config.showLegend !== false && yKeys.length > 1
+      ? legend(yKeys.map((k, i) => ({ label: k, color: color(i) })))
+      : "";
+  return `${svgOpen()}${grid}${series}${labels}</svg>${lg}`;
+}
+
+// ---------------------------------------------------------------------------
+// Pie / Donut
+// ---------------------------------------------------------------------------
+
+function pieChart(data: ChartData, config: ChartConfig, donut: boolean): string {
+  const PIE_H = H;
+  const PIE_DIMS = { W: PIE_H, H: PIE_H };
+  const layout = donut
+    ? computeDonutLayout(data, config, PIE_DIMS, 0.55)
+    : computePieLayout(data, config, PIE_DIMS);
+
+  const xKey = config.xKey ?? data.columns[0];
+
+  const paths = layout.slices
+    .map((s) => `<path d="${s.d}" fill="${color(s.colorIndex)}"/>`)
+    .join("");
+
+  // For the static renderer, the donut hole is rendered as a circle overlay
+  // (simpler than the donut path arcs used in the React version).
+  const hole = donut
+    ? `<circle cx="${layout.cx}" cy="${layout.cy}" r="${layout.radius * 0.55}" fill="var(--deck-surface)"/>`
+    : "";
+
+  const lg = legend(
+    layout.slices.map((s) => ({ label: `${s.label} (${s.value})`, color: color(s.colorIndex) })),
+  );
+  return `<svg viewBox="0 0 ${PIE_H} ${PIE_H}" class="chart-svg chart-pie" preserveAspectRatio="xMidYMid meet">${paths}${hole}</svg>${lg}`;
+}
+
+// ---------------------------------------------------------------------------
+// KPI
+// ---------------------------------------------------------------------------
+
+function kpiCards(data: ChartData, config: ChartConfig): string {
+  const layout = computeKpiLayout(data, config);
+  const cards = layout.metrics
+    .map(
+      (m) =>
+        `<div class="kpi-card"><div class="kpi-value" style="color:${color(m.colorIndex)}">${esc(
+          m.value,
+        )}</div><div class="kpi-label">${esc(m.label)}</div></div>`,
     )
     .join("");
   return `<div class="kpi-grid">${cards}</div>`;
 }
 
+// ---------------------------------------------------------------------------
+// Table
+// ---------------------------------------------------------------------------
+
 function dataTable(data: ChartData): string {
-  const head = data.columns.map((c) => `<th>${esc(c)}</th>`).join("");
-  const body = data.rows
+  const layout = computeTableLayout(data);
+  const head = layout.columns.map((c) => `<th>${esc(c.label)}</th>`).join("");
+  const body = layout.rows
     .map(
       (r) =>
-        `<tr>${data.columns.map((c) => `<td>${esc(label(r[c]))}</td>`).join("")}</tr>`,
+        `<tr>${layout.columns.map((c) => `<td>${esc(r[c.key])}</td>`).join("")}</tr>`,
     )
     .join("");
   return `<table class="chart-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
 }
 
-// Render just the chart graphic (no title/insight wrapper).
+// ---------------------------------------------------------------------------
+// Entry point
+// ---------------------------------------------------------------------------
+
 export function renderChartStatic(section: ChartSection): string {
   const data: ChartData = {
     columns: section.data?.columns ?? [],
@@ -200,19 +226,19 @@ export function renderChartStatic(section: ChartSection): string {
   const yKeys = resolveYKeys(data, config);
 
   if (section.chartType === "kpi") {
-    return yKeys.length ? kpiCards(data, yKeys) : emptyState();
+    return yKeys.length ? kpiCards(data, config) : emptyState();
   }
   if (!data.rows.length || !yKeys.length) return emptyState();
 
   switch (section.chartType) {
     case "bar":
-      return barChart(data, config, yKeys, xKey);
+      return barChart(data, config);
     case "line":
-      return lineChart(data, config, yKeys, xKey);
+      return lineChart(data, config);
     case "pie":
-      return pieChart(data, config, yKeys, xKey, false);
+      return pieChart(data, config, false);
     case "donut":
-      return pieChart(data, config, yKeys, xKey, true);
+      return pieChart(data, config, true);
     default:
       return emptyState();
   }

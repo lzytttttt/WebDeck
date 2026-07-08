@@ -1,44 +1,28 @@
 "use client";
 
 import type { ChartType, ChartData, ChartConfig } from "@/types/deck";
+import {
+  PALETTE_EXTENDED,
+  getColorForIndex,
+  toNum,
+  toLabel,
+  resolveYKeys,
+  computeBarLayout,
+  computeLineLayout,
+  computePieLayout,
+  computeDonutLayout,
+  computeKpiLayout,
+  computeTableLayout,
+} from "@/lib/chart/core";
 
 // Dependency-free SVG chart renderer. Everything is hand-rolled so the deck
 // carries no charting library. Colors resolve from theme CSS vars so charts
 // follow whichever theme the deck root sets.
+//
+// Layout computation is delegated to lib/chart/core.ts; this module only
+// contains JSX rendering.
 
-// Palette derived from theme vars. color-mix fallbacks give distinct hues past
-// the three named vars without introducing hardcoded colors.
-const PALETTE: string[] = [
-  "var(--deck-accent)",
-  "var(--deck-primary)",
-  "var(--deck-secondary)",
-  "color-mix(in srgb, var(--deck-accent) 60%, var(--deck-primary))",
-  "color-mix(in srgb, var(--deck-primary) 60%, var(--deck-secondary))",
-  "color-mix(in srgb, var(--deck-secondary) 60%, var(--deck-accent))",
-  "color-mix(in srgb, var(--deck-accent) 40%, transparent)",
-  "color-mix(in srgb, var(--deck-primary) 40%, transparent)",
-];
-
-const color = (i: number): string => PALETTE[((i % PALETTE.length) + PALETTE.length) % PALETTE.length];
-
-// Resolve the numeric series keys: explicit config, else every column (other
-// than xKey) whose values coerce to finite numbers across the rows.
-function resolveYKeys(data: ChartData, config: ChartConfig): string[] {
-  if (config.yKeys && config.yKeys.length) return config.yKeys;
-  const xKey = config.xKey ?? data.columns[0];
-  return data.columns.filter((c) => {
-    if (c === xKey) return false;
-    return data.rows.some((r) => Number.isFinite(Number(r[c])));
-  });
-}
-
-const num = (v: string | number | undefined): number => {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
-};
-
-const label = (v: string | number | undefined): string =>
-  v === undefined || v === null ? "" : String(v);
+const color = (i: number): string => getColorForIndex(i, PALETTE_EXTENDED);
 
 // Shared responsive SVG wrapper: viewBox fixes the coordinate space, CSS makes
 // it fluid (full width, height scales to preserve aspect ratio).
@@ -97,116 +81,95 @@ function Legend({ items }: { items: Array<{ label: string; color: string }> }) {
 }
 
 // ---------------------------------------------------------------------------
+// Shared dimensions
+// ---------------------------------------------------------------------------
+
+const REACT_DIMS = { W: 640, H: 360, padL: 44, padR: 16, padT: 16, padB: 44 };
+
+// ---------------------------------------------------------------------------
 // Bar
 // ---------------------------------------------------------------------------
 
 function BarChart({
   data,
   config,
-  yKeys,
-  xKey,
 }: {
   data: ChartData;
   config: ChartConfig;
-  yKeys: string[];
-  xKey: string | undefined;
 }) {
-  const W = 640;
-  const H = 360;
-  const padL = 44;
-  const padR = 16;
-  const padT = 16;
-  const padB = 44;
-  const plotW = W - padL - padR;
-  const plotH = H - padT - padB;
-
-  const max = Math.max(
-    1,
-    ...data.rows.flatMap((r) => yKeys.map((k) => num(r[k]))),
-  );
-  const gridLines = 4;
-
-  const groupW = plotW / data.rows.length;
-  const barGap = 4;
-  const innerW = groupW * 0.72;
-  const barW = Math.max(2, (innerW - barGap * (yKeys.length - 1)) / yKeys.length);
-
-  const y0 = padT + plotH;
+  const { W, H, padL, padR, padB } = REACT_DIMS;
+  const layout = computeBarLayout(data, config, REACT_DIMS, {
+    barGap: 4,
+    barMinWidth: 2,
+    groupInnerRatio: 0.72,
+  });
 
   return (
     <div>
       <Svg w={W} h={H}>
         {config.showGrid
-          ? Array.from({ length: gridLines + 1 }, (_, i) => {
-              const gy = padT + (plotH * i) / gridLines;
-              const val = max - (max * i) / gridLines;
-              return (
-                <g key={i}>
-                  <line
-                    x1={padL}
-                    y1={gy}
-                    x2={W - padR}
-                    y2={gy}
-                    stroke="color-mix(in srgb, var(--deck-text) 14%, transparent)"
-                    strokeWidth={1}
-                    opacity={0.5}
-                  />
-                  <text
-                    x={padL - 6}
-                    y={gy + 3}
-                    textAnchor="end"
-                    fontSize={10}
-                    fill="var(--deck-muted)"
-                  >
-                    {Math.round(val)}
-                  </text>
-                </g>
-              );
-            })
+          ? layout.gridLines.map((gl, i) => (
+              <g key={i}>
+                <line
+                  x1={padL}
+                  y1={gl.y}
+                  x2={W - padR}
+                  y2={gl.y}
+                  stroke="color-mix(in srgb, var(--deck-text) 14%, transparent)"
+                  strokeWidth={1}
+                  opacity={0.5}
+                />
+                <text
+                  x={padL - 6}
+                  y={gl.y + 3}
+                  textAnchor="end"
+                  fontSize={10}
+                  fill="var(--deck-muted)"
+                >
+                  {gl.value}
+                </text>
+              </g>
+            ))
           : null}
-        {data.rows.map((r, ri) => {
-          const gx = padL + groupW * ri + (groupW - innerW) / 2;
+        {data.rows.map((_r, ri) => {
+          const groupBars = layout.bars.filter((b) => b.groupIndex === ri);
+          const labelItem = layout.xAxis[ri];
           return (
             <g key={ri}>
-              {yKeys.map((k, ki) => {
-                const v = num(r[k]);
-                const bh = (v / max) * plotH;
-                const bx = gx + ki * (barW + barGap);
-                return (
-                  <rect
-                    key={ki}
-                    x={bx}
-                    y={y0 - bh}
-                    width={barW}
-                    height={Math.max(0, bh)}
-                    rx={2}
-                    fill={color(ki)}
-                  />
-                );
-              })}
+              {groupBars.map((bar) => (
+                <rect
+                  key={bar.colorIndex}
+                  x={bar.x}
+                  y={bar.y}
+                  width={bar.width}
+                  height={bar.height}
+                  rx={2}
+                  fill={color(bar.colorIndex)}
+                />
+              ))}
               <text
-                x={padL + groupW * ri + groupW / 2}
+                x={labelItem.x}
                 y={H - padB + 16}
                 textAnchor="middle"
                 fontSize={10}
                 fill="var(--deck-muted)"
               >
-                {label(xKey ? r[xKey] : "")}
+                {labelItem.label}
               </text>
             </g>
           );
         })}
         <line
           x1={padL}
-          y1={y0}
+          y1={layout.gridLines[0]?.y ?? 0}
           x2={W - padR}
-          y2={y0}
+          y2={layout.gridLines[0]?.y ?? 0}
           stroke="color-mix(in srgb, var(--deck-text) 14%, transparent)"
           strokeWidth={1}
         />
       </Svg>
       {config.showLegend
-        ? <Legend items={yKeys.map((k, i) => ({ label: k, color: color(i) }))} />
+        ? <Legend items={resolveYKeys(data, config).map((k, i) => ({ label: k, color: color(i) }))} />
         : null}
     </div>
   );
@@ -219,106 +182,79 @@ function BarChart({
 function LineChart({
   data,
   config,
-  yKeys,
-  xKey,
 }: {
   data: ChartData;
   config: ChartConfig;
-  yKeys: string[];
-  xKey: string | undefined;
 }) {
-  const W = 640;
-  const H = 360;
-  const padL = 44;
-  const padR = 16;
-  const padT = 16;
-  const padB = 44;
-  const plotW = W - padL - padR;
-  const plotH = H - padT - padB;
-
-  const max = Math.max(
-    1,
-    ...data.rows.flatMap((r) => yKeys.map((k) => num(r[k]))),
-  );
-  const gridLines = 4;
-  const y0 = padT + plotH;
-
-  const n = data.rows.length;
-  const xAt = (i: number) => (n === 1 ? padL + plotW / 2 : padL + (plotW * i) / (n - 1));
-  const yAt = (v: number) => y0 - (v / max) * plotH;
+  const { W, H, padL, padR, padB } = REACT_DIMS;
+  const yKeys = resolveYKeys(data, config);
+  const layout = computeLineLayout(data, config, REACT_DIMS);
 
   return (
     <div>
       <Svg w={W} h={H}>
         {config.showGrid
-          ? Array.from({ length: gridLines + 1 }, (_, i) => {
-              const gy = padT + (plotH * i) / gridLines;
-              const val = max - (max * i) / gridLines;
-              return (
-                <g key={i}>
-                  <line
-                    x1={padL}
-                    y1={gy}
-                    x2={W - padR}
-                    y2={gy}
-                    stroke="color-mix(in srgb, var(--deck-text) 14%, transparent)"
-                    strokeWidth={1}
-                    opacity={0.5}
-                  />
-                  <text
-                    x={padL - 6}
-                    y={gy + 3}
-                    textAnchor="end"
-                    fontSize={10}
-                    fill="var(--deck-muted)"
-                  >
-                    {Math.round(val)}
-                  </text>
-                </g>
-              );
-            })
-          : null}
-        {yKeys.map((k, ki) => {
-          const pts = data.rows.map((r, i) => `${xAt(i)},${yAt(num(r[k]))}`).join(" ");
-          return (
-            <g key={ki}>
-              <polyline
-                points={pts}
-                fill="none"
-                stroke={color(ki)}
-                strokeWidth={2.5}
-                strokeLinejoin="round"
-                strokeLinecap="round"
-              />
-              {data.rows.map((r, i) => (
-                <circle
-                  key={i}
-                  cx={xAt(i)}
-                  cy={yAt(num(r[k]))}
-                  r={3}
-                  fill={color(ki)}
+          ? layout.gridLines.map((gl, i) => (
+              <g key={i}>
+                <line
+                  x1={padL}
+                  y1={gl.y}
+                  x2={W - padR}
+                  y2={gl.y}
+                  stroke="color-mix(in srgb, var(--deck-text) 14%, transparent)"
+                  strokeWidth={1}
+                  opacity={0.5}
                 />
-              ))}
-            </g>
-          );
-        })}
-        {data.rows.map((r, i) => (
+                <text
+                  x={padL - 6}
+                  y={gl.y + 3}
+                  textAnchor="end"
+                  fontSize={10}
+                  fill="var(--deck-muted)"
+                >
+                  {gl.value}
+                </text>
+              </g>
+            ))
+          : null}
+        {layout.series.map((s) => (
+          <g key={s.colorIndex}>
+            <polyline
+              points={s.polyline}
+              fill="none"
+              stroke={color(s.colorIndex)}
+              strokeWidth={2.5}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+            {s.points.map((p, i) => (
+              <circle
+                key={i}
+                cx={p.x}
+                cy={p.y}
+                r={3}
+                fill={color(s.colorIndex)}
+              />
+            ))}
+          </g>
+        ))}
+        {layout.xAxis.map((xl, i) => (
           <text
             key={i}
-            x={xAt(i)}
+            x={xl.x}
             y={H - padB + 16}
             textAnchor="middle"
             fontSize={10}
             fill="var(--deck-muted)"
           >
-            {label(xKey ? r[xKey] : "")}
+            {xl.label}
           </text>
         ))}
         <line
           x1={padL}
-          y1={y0}
+          y1={layout.gridLines[0]?.y ?? 0}
           x2={W - padR}
-          y2={y0}
+          y2={layout.gridLines[0]?.y ?? 0}
           stroke="color-mix(in srgb, var(--deck-text) 14%, transparent)"
           strokeWidth={1}
         />
@@ -337,67 +273,31 @@ function LineChart({
 function PieChart({
   data,
   config,
-  yKeys,
-  xKey,
   donut,
 }: {
   data: ChartData;
   config: ChartConfig;
-  yKeys: string[];
-  xKey: string | undefined;
   donut: boolean;
 }) {
-  const W = 360;
-  const H = 360;
-  const cx = W / 2;
-  const cy = H / 2;
-  const r = 150;
-  const inner = donut ? 82 : 0;
+  const PIE_DIMS = { W: 360, H: 360 };
+  const layout = donut
+    ? computeDonutLayout(data, config, PIE_DIMS, 0.55, 150)
+    : computePieLayout(data, config, PIE_DIMS, 150);
 
-  const key = yKeys[0];
-  const values = data.rows.map((row) => num(row[key]));
-  const total = values.reduce((a, b) => a + b, 0);
-
-  // Guard: all-zero total would divide by zero.
-  const safeTotal = total > 0 ? total : 1;
-
-  let angle = -Math.PI / 2; // start at top
-  const slices = values.map((v, i) => {
-    const frac = v / safeTotal;
-    const start = angle;
-    const end = angle + frac * Math.PI * 2;
-    angle = end;
-    const largeArc = end - start > Math.PI ? 1 : 0;
-    const x1 = cx + r * Math.cos(start);
-    const y1 = cy + r * Math.sin(start);
-    const x2 = cx + r * Math.cos(end);
-    const y2 = cy + r * Math.sin(end);
-
-    let d: string;
-    if (inner > 0) {
-      const ix1 = cx + inner * Math.cos(end);
-      const iy1 = cy + inner * Math.sin(end);
-      const ix2 = cx + inner * Math.cos(start);
-      const iy2 = cy + inner * Math.sin(start);
-      d = `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} L ${ix1} ${iy1} A ${inner} ${inner} 0 ${largeArc} 0 ${ix2} ${iy2} Z`;
-    } else {
-      d = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`;
-    }
-    return { d, color: color(i) };
-  });
+  const xKey = config.xKey ?? data.columns[0];
 
   return (
     <div>
-      <Svg w={W} h={H}>
-        {slices.map((s, i) => (
-          <path key={i} d={s.d} fill={s.color} stroke="var(--deck-bg)" strokeWidth={1} />
+      <Svg w={PIE_DIMS.W} h={PIE_DIMS.H}>
+        {layout.slices.map((s) => (
+          <path key={s.colorIndex} d={s.d} fill={color(s.colorIndex)} stroke="var(--deck-bg)" strokeWidth={1} />
         ))}
       </Svg>
       {config.showLegend !== false
         ? (
           <Legend
             items={data.rows.map((row, i) => ({
-              label: label(xKey ? row[xKey] : `#${i + 1}`),
+              label: toLabel(xKey ? row[xKey] : `#${i + 1}`),
               color: color(i),
             }))}
           />
@@ -413,20 +313,20 @@ function PieChart({
 
 function KpiCards({
   data,
-  yKeys,
+  config,
 }: {
   data: ChartData;
-  yKeys: string[];
+  config: ChartConfig;
 }) {
-  const last = data.rows[data.rows.length - 1];
+  const layout = computeKpiLayout(data, config, { useLastRow: true });
   return (
     <div className="flex flex-wrap gap-4">
-      {yKeys.map((k, i) => (
-        <div key={k} className="deck-card flex-1 p-6" style={{ minWidth: 160 }}>
-          <div className="text-3xl font-bold deck-heading" style={{ color: color(i) }}>
-            {label(last ? last[k] : "")}
+      {layout.metrics.map((m) => (
+        <div key={m.label} className="deck-card flex-1 p-6" style={{ minWidth: 160 }}>
+          <div className="text-3xl font-bold deck-heading" style={{ color: color(m.colorIndex) }}>
+            {m.value}
           </div>
-          <div className="mt-1 text-sm deck-muted">{k}</div>
+          <div className="mt-1 text-sm deck-muted">{m.label}</div>
         </div>
       ))}
     </div>
@@ -438,27 +338,28 @@ function KpiCards({
 // ---------------------------------------------------------------------------
 
 function DataTable({ data }: { data: ChartData }) {
+  const layout = computeTableLayout(data);
   return (
     <div className="deck-card overflow-x-auto">
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr>
-            {data.columns.map((c) => (
+            {layout.columns.map((c) => (
               <th
-                key={c}
+                key={c.key}
                 className="deck-border border-b px-4 py-3 text-left font-semibold deck-heading"
               >
-                {c}
+                {c.label}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {data.rows.map((row, ri) => (
+          {layout.rows.map((row, ri) => (
             <tr key={ri}>
-              {data.columns.map((c) => (
-                <td key={c} className="deck-border border-b px-4 py-2.5 deck-text">
-                  {label(row[c])}
+              {layout.columns.map((c) => (
+                <td key={c.key} className="deck-border border-b px-4 py-2.5 deck-text">
+                  {row[c.key]}
                 </td>
               ))}
             </tr>
@@ -491,23 +392,21 @@ export function ChartView({
     return columns.length ? <DataTable data={safe} /> : <EmptyState />;
   }
 
-  const xKey = config.xKey ?? columns[0];
-  const yKeys = resolveYKeys(safe, config);
-
   // Every graphical chart needs at least one row and one numeric series.
+  const yKeys = resolveYKeys(safe, config);
   if (!rows.length || !yKeys.length) return <EmptyState />;
 
   switch (chartType) {
     case "bar":
-      return <BarChart data={safe} config={config} yKeys={yKeys} xKey={xKey} />;
+      return <BarChart data={safe} config={config} />;
     case "line":
-      return <LineChart data={safe} config={config} yKeys={yKeys} xKey={xKey} />;
+      return <LineChart data={safe} config={config} />;
     case "pie":
-      return <PieChart data={safe} config={config} yKeys={yKeys} xKey={xKey} donut={false} />;
+      return <PieChart data={safe} config={config} donut={false} />;
     case "donut":
-      return <PieChart data={safe} config={config} yKeys={yKeys} xKey={xKey} donut />;
+      return <PieChart data={safe} config={config} donut />;
     case "kpi":
-      return <KpiCards data={safe} yKeys={yKeys} />;
+      return <KpiCards data={safe} config={config} />;
     default:
       return <EmptyState />;
   }

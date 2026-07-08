@@ -184,3 +184,112 @@ export function cssVarsToString(vars: Record<string, string>): string {
     .map(([k, v]) => `${k}:${v}`)
     .join(";");
 }
+
+// ---------------------------------------------------------------------------
+// Custom theme: Google Fonts helpers
+// ---------------------------------------------------------------------------
+
+/** Curated list of popular Google Fonts for the font selector in the editor. */
+export const GOOGLE_FONTS_PRESET: string[] = [
+  "Inter",
+  "Roboto",
+  "Open Sans",
+  "Lato",
+  "Montserrat",
+  "Poppins",
+  "Nunito",
+  "Raleway",
+  "Playfair Display",
+  "Merriweather",
+  "Source Sans 3",
+  "Ubuntu",
+  "Work Sans",
+  "Fira Sans",
+  "DM Sans",
+  "Space Grotesk",
+  "Outfit",
+  "Bricolage Grotesque",
+  "Bitter",
+  "Libre Baskerville",
+];
+
+/**
+ * Build a Google Fonts CSS URL from the theme's typography fields and any
+ * additional `customFonts` entries.  Returns `undefined` when no Google Fonts
+ * are needed (the built-in system-font themes return nothing).
+ */
+export function getGoogleFontsUrl(theme: DeckTheme): string | undefined {
+  const families = new Set<string>();
+
+  // Extract the first font-family name from a CSS font-family stack string.
+  // e.g.  "'Inter', -apple-system, sans-serif" → "Inter"
+  function firstFont(stack: string): string | null {
+    const match = stack.match(/^['"]?([^'",]+)/);
+    if (!match) return null;
+    const name = match[1].trim();
+    // System font stacks (starting with -, containing "apple", "Segoe", etc.)
+    // should not be fetched from Google Fonts.
+    if (name.startsWith("-") || /apple|Segoe|system|BlinkMac|Helvetica|Arial|Georgia|Times|Courier|Verdana|Tahoma|Impact/i.test(name)) {
+      return null;
+    }
+    return name;
+  }
+
+  const h = firstFont(theme.typography.headingFont);
+  if (h) families.add(h);
+  const b = firstFont(theme.typography.bodyFont);
+  if (b) families.add(b);
+
+  // Merge any explicit customFonts entries.
+  for (const cf of theme.customFonts ?? []) {
+    if (cf.family) families.add(cf.family);
+  }
+
+  if (families.size === 0) return undefined;
+
+  const familyParams = [...families]
+    .map((f) => `family=${encodeURIComponent(f)}:wght@400;500;600;700`)
+    .join("&");
+  return `https://fonts.googleapis.com/css2?${familyParams}&display=swap`;
+}
+
+// ---------------------------------------------------------------------------
+// Export / Import
+// ---------------------------------------------------------------------------
+
+/** Serialize a DeckTheme to a JSON string (for file download). */
+export function exportTheme(theme: DeckTheme): string {
+  return JSON.stringify(theme, null, 2);
+}
+
+/** Deserialize a JSON string back into a DeckTheme.  Returns null if the
+ *  input is not valid JSON or is missing required fields. */
+export function importTheme(json: string): DeckTheme | null {
+  try {
+    const obj = JSON.parse(json);
+    if (
+      typeof obj === "object" &&
+      obj !== null &&
+      typeof obj.id === "string" &&
+      typeof obj.name === "string" &&
+      typeof obj.colors === "object" &&
+      typeof obj.typography === "object"
+    ) {
+      return obj as DeckTheme;
+    }
+  } catch {
+    // ignore parse errors
+  }
+  return null;
+}
+
+/**
+ * Produce the CSS text to inject into the deck root when the theme carries a
+ * `customCss` field.  The CSS is scoped to `.deck-root` to avoid leaking into
+ * the editor chrome.
+ */
+export function buildCustomCss(theme: DeckTheme): string | undefined {
+  if (!theme.customCss || !theme.customCss.trim()) return undefined;
+  // Already scoped by the caller (DeckRenderer wraps everything in .deck-root)
+  return theme.customCss;
+}
