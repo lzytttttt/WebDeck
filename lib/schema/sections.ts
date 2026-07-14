@@ -294,6 +294,7 @@ export const WebDeckAIOutputSchema = z.object({
     })
     .optional(),
   mode: z.enum(["conservative", "enhanced"]).optional(),
+  motion: DeckMotionSchema.optional(),
   sections: z
     .array(
       z.object({

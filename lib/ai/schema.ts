@@ -112,7 +112,9 @@ export function validateWebDeckWithZod(v: unknown): WebDeck | null {
     subtitle: data.subtitle,
     theme: getThemeById(themeId),
     mode: data.mode ?? "conservative",
-    motion: { ...DEFAULT_MOTION },
+    // Use the AI-provided motion when present (validated by DeckMotionSchema),
+    // otherwise fall back to the default.
+    motion: data.motion ?? { ...DEFAULT_MOTION },
     sections,
     suggestions,
   };

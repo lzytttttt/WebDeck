@@ -15,6 +15,9 @@ export type ExtractedSlide = {
   imageRefCount: number;
   tableRefCount: number;
   images: ExtractedImage[];
+  // v0.4 animation hints (raw PPTX effect names), see extractAnimations.
+  transition?: string;
+  entrance?: string;
 };
 
 // An image extracted from the PPTX ZIP media directory.

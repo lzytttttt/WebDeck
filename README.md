@@ -355,7 +355,7 @@ WebDeck/
 
 | 限制 | 说明 | 计划 |
 |---|---|---|
-| 不保留 PPT 动画/过渡 | PPT 的入场动画、切换效果无法映射 | Roadmap v0.4 |
+| PPT 动画为近似还原 | 入场/切换动画已映射到 Web 动效词汇（fade/slide-up/scale/stagger），复杂时间线与触发器为近似 | 持续优化 |
 | 不支持 SmartArt | SmartArt 是 PPT 特有的复杂元素 | 暂无计划 |
 | AI 结果需人工审核 | AI 可能误判内容语义，建议转换后检查 | 持续优化 Prompt |
 
@@ -365,7 +365,7 @@ WebDeck/
 
 - [x] **v0.2** — 图片提取与内联（从 PPTX 中提取图片嵌入 HTML）
 - [x] **v0.3** — 多 AI Provider（Anthropic / OpenAI / Ollama / Mock）+ 界面切换与持久化
-- [ ] **v0.4** — PPT 动画 → CSS 动画映射
+- [x] **v0.4** — PPT 动画 → CSS 动画映射 + 质量基线（CI / 覆盖率门禁 / 版本治理）
 - [ ] **v0.5** — 模板市场（社区共享 deck 模板）
 - [ ] **v1.0** — 团队协作 + 版本历史 + 批注
 

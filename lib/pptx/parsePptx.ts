@@ -1,6 +1,7 @@
 import JSZip from "jszip";
 import { extractSlideText, extractNotesText, countImageRefs, countTableRefs } from "./extractSlideText";
 import { extractSlideImages } from "./extractImages";
+import { extractSlideTransition, extractSlideEntrance } from "./extractAnimations";
 import type { ExtractedSlide } from "./types";
 import type { ParsedSlide } from "@/types/project";
 import { uid } from "@/lib/utils";
@@ -63,6 +64,8 @@ export async function extractSlides(buffer: Buffer | ArrayBuffer): Promise<Extra
       imageRefCount: countImageRefs(xml),
       tableRefCount: countTableRefs(xml),
       images: slideImages,
+      transition: extractSlideTransition(xml),
+      entrance: extractSlideEntrance(xml),
     });
   }
 
@@ -101,6 +104,8 @@ export function toParsedSlides(extracted: ExtractedSlide[]): ParsedSlide[] {
       notes: slide.notes,
       imageRefCount: slide.imageRefCount,
       tableRefCount: slide.tableRefCount,
+      transition: slide.transition,
+      entrance: slide.entrance,
       images: slide.images.map((img, imgIdx) => ({
         id: uid("img_"),
         name: img.fileName,

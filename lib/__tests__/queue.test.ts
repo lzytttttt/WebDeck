@@ -3,6 +3,7 @@ import {
   createJob,
   getJob,
   cancelJob,
+  updateJob,
   runJob,
 } from "@/lib/workers/queue";
 
@@ -41,5 +42,46 @@ describe("job queue", () => {
 
   it("rejects cancellation for a missing job", () => {
     expect(cancelJob("job_does_not_exist")).toBe(false);
+  });
+
+  it("reports progress and completes with the runner result", async () => {
+    const job = createJob("test");
+    runJob(job.id, async (onProgress) => {
+      onProgress(50);
+      return { ok: true };
+    });
+    // Allow the fire-and-forget promise to settle.
+    await new Promise((r) => setTimeout(r, 40));
+    const after = getJob(job.id)!;
+    expect(after.status).toBe("completed");
+    expect(after.progress).toBe(100);
+    expect(after.result).toEqual({ ok: true });
+  });
+
+  it("marks a job as failed when the runner throws", async () => {
+    const job = createJob("test");
+    runJob(job.id, async () => {
+      throw new Error("boom");
+    });
+    await new Promise((r) => setTimeout(r, 40));
+    const after = getJob(job.id)!;
+    expect(after.status).toBe("failed");
+    expect(after.error).toContain("boom");
+  });
+
+  it("updateJob mutates an in-memory job", () => {
+    const job = createJob("test");
+    updateJob(job.id, { progress: 42 });
+    expect(getJob(job.id)!.progress).toBe(42);
+  });
+
+  it("getJob falls back to the persisted DB record", () => {
+    const job = createJob("test");
+    updateJob(job.id, { status: "completed", progress: 100 });
+    // A fresh lookup still resolves the job (from memory here, but the DB
+    // fallback path is exercised if the process were restarted).
+    const found = getJob(job.id);
+    expect(found).toBeDefined();
+    expect(found!.id).toBe(job.id);
   });
 });

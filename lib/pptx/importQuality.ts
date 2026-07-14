@@ -51,6 +51,7 @@ export function buildImportQualityReport(
   let imagesDetectedCount = 0;
   let tablesDetectedCount = 0;
   let emptySlidesCount = 0;
+  let animatedSlidesCount = 0;
 
   const push = (slideIndex: number, type: ImportWarningType) => {
     warnings.push({
@@ -68,6 +69,8 @@ export function buildImportQualityReport(
     const title = (slide.title ?? "").trim();
     const imageRefs = slide.imageRefCount ?? 0;
     const tableRefs = slide.tableRefCount ?? 0;
+
+    if (slide.transition || slide.entrance) animatedSlidesCount += 1;
 
     textBlocksCount += blockCount;
     bulletsCount += slide.bullets?.length ?? 0;
@@ -110,5 +113,6 @@ export function buildImportQualityReport(
     emptySlidesCount,
     warningCount: warnings.length,
     warnings,
+    animatedSlidesCount,
   };
 }

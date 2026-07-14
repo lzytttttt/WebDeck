@@ -12,6 +12,8 @@ import type {
 } from "@/types/deck";
 import { DEFAULT_THEME } from "@/lib/deck/theme";
 import { DEFAULT_MOTION } from "@/types/deck";
+import { mapPptxAnimation } from "@/lib/deck/animationMap";
+import type { SectionMotionPreset } from "@/types/deck";
 import type { ParsedSlide } from "@/types/project";
 import { uid } from "@/lib/utils";
 
@@ -24,7 +26,7 @@ function summarize(text: string, max = 120): string {
   return clean.slice(0, max - 1).trimEnd() + "…";
 }
 
-function buildHero(slides: ParsedSlide[], projectName: string): HeroSection {
+function buildHero(slides: ParsedSlide[], projectName: string, preset: SectionMotionPreset): HeroSection {
   const first = slides[0];
   return {
     id: uid("sec_"),
@@ -38,6 +40,7 @@ function buildHero(slides: ParsedSlide[], projectName: string): HeroSection {
         : "由 PPT 升级而来的可交互网页版汇报材料。",
     summary: "开场页",
     ctaLabel: "开始浏览",
+    motion: { preset },
   };
 }
 
@@ -58,7 +61,7 @@ function buildAgenda(slides: ParsedSlide[]): AgendaSection | null {
   };
 }
 
-function buildSlideLike(slide: ParsedSlide): SlideLikeSection {
+function buildSlideLike(slide: ParsedSlide, preset: SectionMotionPreset): SlideLikeSection {
   const body =
     slide.bullets.length === 0 && slide.rawText
       ? summarize(slide.rawText, 400)
@@ -72,6 +75,7 @@ function buildSlideLike(slide: ParsedSlide): SlideLikeSection {
     bullets: slide.bullets,
     body,
     notes: slide.notes,
+    motion: { preset },
   };
 }
 
@@ -118,9 +122,14 @@ function buildCTA(slides: ParsedSlide[]): CTASection {
 
 // Conservative mode: hero + one slide-like section per PPT page + CTA.
 // Enhanced mode: hero + agenda + slide sections + FAQ + CTA (more web-native).
-function buildSections(slides: ParsedSlide[], projectName: string, mode: WebDeck["mode"]): DeckSection[] {
+function buildSections(
+  slides: ParsedSlide[],
+  projectName: string,
+  mode: WebDeck["mode"],
+  sectionMotions: SectionMotionPreset[],
+): DeckSection[] {
   const sections: DeckSection[] = [];
-  sections.push(buildHero(slides, projectName));
+  sections.push(buildHero(slides, projectName, sectionMotions[0] ?? "inherit"));
 
   if (mode === "enhanced") {
     const agenda = buildAgenda(slides);
@@ -129,9 +138,11 @@ function buildSections(slides: ParsedSlide[], projectName: string, mode: WebDeck
 
   // Skip slide 1 in the body since it became the hero.
   const bodySlides = slides.slice(1);
-  for (const slide of bodySlides) {
-    sections.push(buildSlideLike(slide));
-  }
+  bodySlides.forEach((slide, i) => {
+    // bodySlides is slides.slice(1), so the original array index is i + 1.
+    const preset = sectionMotions[i + 1] ?? "inherit";
+    sections.push(buildSlideLike(slide, preset));
+  });
 
   if (mode === "enhanced") {
     sections.push(buildFAQ(slides));
@@ -233,6 +244,8 @@ export class MockAIProvider implements AIProvider {
     // Simulate small delay for mock to make progress visible
     await new Promise((r) => setTimeout(r, 300));
     onProgress?.(50);
+    // Derive deck + per-section motion from any PPTX animation hints.
+    const { deckMotion, sectionMotions } = mapPptxAnimation(slides);
     const deck: WebDeck = {
       id: uid("deck_"),
       title: slides[0]?.title || projectName,
@@ -241,8 +254,8 @@ export class MockAIProvider implements AIProvider {
         : "PPT → HTML Web Deck",
       theme: DEFAULT_THEME,
       mode,
-      motion: { ...DEFAULT_MOTION },
-      sections: buildSections(slides, projectName, mode),
+      motion: deckMotion,
+      sections: buildSections(slides, projectName, mode, sectionMotions),
       suggestions: buildSuggestions(slides),
     };
     onProgress?.(90);

@@ -32,6 +32,13 @@ export type ParsedSlide = {
   // from the slide XML (see extractSlideText). Used by buildImportQualityReport.
   imageRefCount?: number;
   tableRefCount?: number;
+  // v0.4 animation hints: raw PPTX effect names harvested from slide XML
+  // (see extractAnimations). `transition` is the slide-transition effect;
+  // `entrance` is the primary entrance-animation effect. Undefined means the
+  // source slide carried no such animation. Mapped to the Motion vocab by
+  // lib/deck/animationMap.
+  transition?: string;
+  entrance?: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -66,6 +73,8 @@ export type ImportQualityReport = {
   emptySlidesCount: number;
   warningCount: number;
   warnings: ImportWarning[];
+  /** Count of slides that carried a PPTX transition or entrance animation (v0.4). */
+  animatedSlidesCount?: number;
 };
 
 export type ProjectStatus = "uploaded" | "parsed" | "generated" | "published";

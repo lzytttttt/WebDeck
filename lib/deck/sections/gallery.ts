@@ -3,7 +3,7 @@ import { registerSection } from "@/lib/deck/sectionRegistry";
 import { GallerySection as GallerySectionComponent } from "@/components/deck/GallerySection";
 import { esc } from "@/lib/deck/htmlUtils";
 
-// eslint-disable-next-line — <img> is intentional for a static, framework-free file.
+// eslint-disable-next-line @next/next/no-img-element -- <img> is intentional for a static, framework-free file.
 function img(url: string, alt: string, extra = ""): string {
   if (!url) return `<div class="img-empty">No image</div>`;
   return `<img src="${esc(url)}" alt="${esc(alt)}" loading="lazy" ${extra}/>`;

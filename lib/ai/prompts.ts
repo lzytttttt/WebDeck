@@ -16,6 +16,7 @@ type WebDeck = {
   subtitle?: string
   theme: { name: string; primary: string; accent: string; background: string }
   mode: "conservative" | "enhanced"
+  motion: { preset:"none"|"fade"|"slide-up"|"scale"|"stagger"; transition:"none"|"fade"|"slide"|"zoom" }
   sections: DeckSection[]
   suggestions: EnhancementSuggestion[]
 }
@@ -46,6 +47,7 @@ Guidance:
 - enhanced mode: reinterpret content into web-native sections (hero, agenda, cards, timeline, comparison, faq, cta). Merge or split slides as sensible.
 - Always include a hero first and a cta last.
 - Produce 5-8 suggestions describing further enhancements.
+- If a parsed slide includes an \`animation\` hint (transition/entrance), reflect it: set the deck-level \`motion\` and/or each section's \`motion.preset\` (use "inherit" when a section should follow the deck preset). This preserves the original PPT's motion intent.
 - Every id must be a short unique string.`;
 
 export function buildWebDeckUserPrompt(
@@ -69,7 +71,11 @@ export function buildWebDeckUserPrompt(
               )
               .join("\n")
           : "";
-      return `- slide ${s.index}:\n  title: ${s.title}${bullets}${notes}${imgs}`;
+      const anim =
+        s.transition || s.entrance
+          ? `\n  animation: { transition: ${s.transition ?? "none"}, entrance: ${s.entrance ?? "none"} }`
+          : "";
+      return `- slide ${s.index}:\n  title: ${s.title}${bullets}${notes}${imgs}${anim}`;
     })
     .join("\n");
 
