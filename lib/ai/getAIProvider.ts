@@ -7,11 +7,23 @@ import { OllamaProvider } from "./OllamaProvider";
 export type ProviderName = "anthropic" | "openai" | "ollama" | "mock";
 
 /**
- * Resolve the desired provider from the AI_PROVIDER env var.
- * Falls back to "anthropic" when a key is present, otherwise "mock".
+ * Optional overrides for provider selection. When supplied (e.g. from the
+ * user-saved settings), these take precedence over environment variables.
  */
-function resolveRequestedProvider(): ProviderName {
-  const raw = (process.env.AI_PROVIDER || "").trim().toLowerCase();
+export interface ProviderOptions {
+  provider?: ProviderName;
+  anthropicKey?: string;
+  openaiKey?: string;
+  openaiModel?: string;
+  ollamaUrl?: string;
+}
+
+/**
+ * Resolve the desired provider, preferring an explicit override, then the
+ * AI_PROVIDER env var, then auto-detecting from available API keys.
+ */
+function resolveRequestedProvider(opts?: ProviderOptions): ProviderName {
+  const raw = (opts?.provider ?? (process.env.AI_PROVIDER || "")).trim().toLowerCase();
   if (raw === "anthropic" || raw === "openai" || raw === "ollama" || raw === "mock") {
     return raw;
   }
@@ -21,20 +33,20 @@ function resolveRequestedProvider(): ProviderName {
   return "mock";
 }
 
-function createProvider(name: ProviderName): AIProvider | null {
+function createProvider(name: ProviderName, opts?: ProviderOptions): AIProvider | null {
   switch (name) {
     case "anthropic": {
-      const key = process.env.ANTHROPIC_API_KEY?.trim();
+      const key = opts?.anthropicKey ?? process.env.ANTHROPIC_API_KEY?.trim();
       if (!key) return null;
-      return new AnthropicAIProvider(key);
+      return new AnthropicAIProvider(key, process.env.ANTHROPIC_MODEL);
     }
     case "openai": {
-      const key = process.env.OPENAI_API_KEY?.trim();
+      const key = opts?.openaiKey ?? process.env.OPENAI_API_KEY?.trim();
       if (!key) return null;
-      return new OpenAIProvider(key);
+      return new OpenAIProvider(key, opts?.openaiModel || undefined);
     }
     case "ollama": {
-      return new OllamaProvider();
+      return new OllamaProvider(opts?.ollamaUrl || undefined);
     }
     case "mock":
       return mockProvider;
@@ -47,16 +59,16 @@ function createProvider(name: ProviderName): AIProvider | null {
  * Multi-provider factory with automatic fallback.
  *
  * Selection order:
- *   1. AI_PROVIDER env var (explicit choice)
+ *   1. explicit `opts` (user-saved settings) or AI_PROVIDER env var
  *   2. Auto-detect from available API keys (legacy)
  *   3. MockAIProvider (offline default)
  *
  * Fallback: if the requested provider creation fails (e.g. missing key),
  * the function tries mock as a last resort so the user always gets a deck.
  */
-export function getAIProvider(): AIProvider {
-  const requested = resolveRequestedProvider();
-  const provider = createProvider(requested);
+export function getAIProvider(opts?: ProviderOptions): AIProvider {
+  const requested = resolveRequestedProvider(opts);
+  const provider = createProvider(requested, opts);
   if (provider) return provider;
 
   // Fallback chain: requested → mock.

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getProject, updateProject } from "@/lib/storage/projectRepo";
 import { ensureDb } from "@/lib/storage/db";
 import { getAIProvider } from "@/lib/ai/getAIProvider";
+import { getAIConfig } from "@/lib/storage/settings";
 import { createJob, runJob } from "@/lib/workers/queue";
 import type { DeckMode, WebDeck } from "@/types/deck";
 
@@ -38,7 +39,7 @@ export async function POST(
 
   // Regenerate via the AI provider — create an async job.
   const mode: DeckMode = body.mode || project.webDeck?.mode || "conservative";
-  const provider = getAIProvider();
+  const provider = getAIProvider(getAIConfig());
 
   const job = createJob("generate-webdeck");
 

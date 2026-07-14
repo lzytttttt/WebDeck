@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getJob } from "@/lib/workers/queue";
+import { getJob, cancelJob } from "@/lib/workers/queue";
 
 export const runtime = "nodejs";
 
@@ -24,4 +24,26 @@ export async function GET(
   if (job.status === "failed") body.error = job.error;
 
   return NextResponse.json(body);
+}
+
+/**
+ * DELETE /api/jobs/[id] — cancel a pending/running job.
+ * Terminal jobs (completed/failed/cancelled) cannot be cancelled.
+ */
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const job = getJob(params.id);
+  if (!job) {
+    return NextResponse.json({ error: "Job not found" }, { status: 404 });
+  }
+  const cancelled = cancelJob(params.id);
+  if (!cancelled) {
+    return NextResponse.json(
+      { status: job.status, error: "Job cannot be cancelled" },
+      { status: 409 },
+    );
+  }
+  return NextResponse.json({ status: "cancelled" });
 }

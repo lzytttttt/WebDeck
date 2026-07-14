@@ -65,6 +65,30 @@ function migrate(db: Database.Database): void {
     CREATE TABLE IF NOT EXISTS schema_version (
       version INTEGER NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS custom_themes (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      theme_json TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS jobs (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL,
+      status TEXT NOT NULL,
+      progress INTEGER NOT NULL DEFAULT 0,
+      error TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
   `);
 
   // Seed schema version row if missing

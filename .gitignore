@@ -18,3 +18,12 @@ data/*.bak
 
 # Puppeteer cache
 .puppeteer/
+
+# Local helper / build artifacts (do not commit)
+.codebuddy/
+build_out.txt
+tsc_out.txt
+dev.err
+dev.log
+server.pid
+tsconfig.tsbuildinfo

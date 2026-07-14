@@ -1,8 +1,7 @@
 "use client";
 
-import type { WebDeck, DeckSection, DeckTheme } from "@/types/deck";
+import type { WebDeck, DeckSection, DeckTheme, DeckThemeColors } from "@/types/deck";
 import {
-  BUILTIN_THEMES,
   GOOGLE_FONTS_PRESET,
   exportTheme,
   importTheme,
@@ -13,6 +12,9 @@ import {
   ButtonGroup,
   EmptyInspector,
 } from "./InspectorParts";
+import { ColorPicker } from "../ColorPicker";
+import { DesignTemplateBrowser } from "../DesignTemplateBrowser";
+import { ThemeLibraryPanel } from "../ThemeLibraryPanel";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { useCallback, useRef, useState } from "react";
 
@@ -97,6 +99,26 @@ export function DesignInspector({
   const currentHeading = headingFont.match(/^['"]?([^'",]+)/)?.[1] ?? "";
   const currentBody = bodyFont.match(/^['"]?([^'",]+)/)?.[1] ?? "";
 
+  // Patch the nested color object (one channel at a time).
+  const updateColors = useCallback(
+    (patch: Partial<DeckThemeColors>) => {
+      onTheme({ ...deck.theme, colors: { ...deck.theme.colors, ...patch } });
+    },
+    [deck.theme, onTheme],
+  );
+
+  // Patch a single shape enum (radius / shadow / spacing).
+  const updateShape = useCallback(
+    (key: "radius" | "shadow" | "spacing", value: string) => {
+      onTheme({ ...deck.theme, [key]: value } as DeckTheme);
+    },
+    [deck.theme, onTheme],
+  );
+
+  const RADIUS_OPTIONS = ["none", "sm", "md", "lg", "xl"];
+  const SHADOW_OPTIONS = ["none", "sm", "md", "lg"];
+  const SPACING_OPTIONS = ["compact", "normal", "spacious"];
+
   /** Download the current theme as a .json file. */
   const handleExport = useCallback(() => {
     const json = exportTheme(deck.theme);
@@ -128,43 +150,47 @@ export function DesignInspector({
 
   return (
     <>
-      {/* ── Built-in theme selector ── */}
-      <InspectorSection title={d.theme}>
+      {/* ── Design templates (built-in) ── */}
+      <InspectorSection title={d.templates}>
+        <DesignTemplateBrowser currentThemeId={deck.theme.id} onApply={onTheme} />
+      </InspectorSection>
+
+      {/* ── Theme colors ── */}
+      <InspectorSection title={d.colors}>
         <div className="space-y-2">
-          {BUILTIN_THEMES.map((theme) => {
-            const active = theme.id === deck.theme.id;
-            return (
-              <button
-                key={theme.id}
-                onClick={() => onTheme(theme)}
-                className={
-                  "flex w-full items-center gap-3 rounded-lg border p-2.5 text-left transition-colors " +
-                  (active
-                    ? "border-accent ring-1 ring-accent"
-                    : "border-border hover:border-accent/50")
-                }
-              >
-                <span
-                  className="flex h-8 w-8 shrink-0 overflow-hidden rounded-md border"
-                  style={{ background: theme.colors.background }}
-                >
-                  <span className="h-full w-1/3" style={{ background: theme.colors.primary }} />
-                  <span className="h-full w-1/3" style={{ background: theme.colors.accent }} />
-                  <span className="h-full w-1/3" style={{ background: theme.colors.secondary }} />
-                </span>
-                <span className="flex-1">
-                  <span className="block text-sm font-medium text-foreground">
-                    {theme.name}
-                  </span>
-                  <span className="block text-xs text-muted-foreground">
-                    {theme.typography.scale} · {theme.radius} · {theme.spacing}
-                  </span>
-                </span>
-                {active ? <span className="text-accent">✓</span> : null}
-              </button>
-            );
-          })}
+          <ColorPicker label={d.background} value={deck.theme.colors.background} onChange={(v) => updateColors({ background: v })} />
+          <ColorPicker label={d.surface} value={deck.theme.colors.surface} onChange={(v) => updateColors({ surface: v })} />
+          <ColorPicker label={d.primary} value={deck.theme.colors.primary} onChange={(v) => updateColors({ primary: v })} />
+          <ColorPicker label={d.secondary} value={deck.theme.colors.secondary} onChange={(v) => updateColors({ secondary: v })} />
+          <ColorPicker label={d.accent} value={deck.theme.colors.accent} onChange={(v) => updateColors({ accent: v })} />
+          <ColorPicker label={d.text} value={deck.theme.colors.text} onChange={(v) => updateColors({ text: v })} />
+          <ColorPicker label={d.mutedText} value={deck.theme.colors.mutedText} onChange={(v) => updateColors({ mutedText: v })} />
         </div>
+      </InspectorSection>
+
+      {/* ── Shape controls ── */}
+      <InspectorSection title={d.shape}>
+        <Field label={d.radius}>
+          <ButtonGroup
+            value={deck.theme.radius}
+            options={RADIUS_OPTIONS.map((o) => ({ value: o, label: o }))}
+            onChange={(v) => updateShape("radius", v)}
+          />
+        </Field>
+        <Field label={d.shadow}>
+          <ButtonGroup
+            value={deck.theme.shadow}
+            options={SHADOW_OPTIONS.map((o) => ({ value: o, label: o }))}
+            onChange={(v) => updateShape("shadow", v)}
+          />
+        </Field>
+        <Field label={d.spacing}>
+          <ButtonGroup
+            value={deck.theme.spacing}
+            options={SPACING_OPTIONS.map((o) => ({ value: o, label: o }))}
+            onChange={(v) => updateShape("spacing", v)}
+          />
+        </Field>
       </InspectorSection>
 
       {/* ── Custom theme section ── */}
@@ -270,6 +296,11 @@ export function DesignInspector({
             </div>
           </div>
         )}
+      </InspectorSection>
+
+      {/* ── My saved themes ── */}
+      <InspectorSection title={d.themeLibrary}>
+        <ThemeLibraryPanel currentTheme={deck.theme} onApply={onTheme} />
       </InspectorSection>
 
       {/* ── Section layout ── */}

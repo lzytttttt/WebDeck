@@ -22,7 +22,7 @@ Imagine this: you've crafted a polished PPT, but every time you share it, you wo
 Upload a `.pptx` file and Web Deck automatically extracts titles, body text, bullet points, speaker notes, and structural metadata from every slide. An import quality report gives you full visibility into what was captured.
 
 ### 🤖 AI-Powered Content Restructuring
-Powered by Anthropic Claude, Web Deck doesn't just "screenshot your slides to web" — it **understands the semantic meaning** of your content and intelligently restructures it into native web components:
+Powered by a swappable AI Provider (**Anthropic Claude / OpenAI / local Ollama / offline Mock**), Web Deck doesn't just "screenshot your slides to web" — it **understands the semantic meaning** of your content and intelligently restructures it into native web components:
 
 | In your PPT… | → In your Web Deck… |
 |---|---|
@@ -82,6 +82,21 @@ Complete English and Chinese (简体中文) support with one-click language swit
 ### 🔌 Works Offline
 No API key? No problem. Web Deck ships with a built-in `MockAIProvider` so you can experience the full workflow without any external services.
 
+### 🔀 Multi-Provider Support
+Switch between **Anthropic / OpenAI / Ollama / Mock** from the "AI Provider" panel in the editor toolbar. Fill in the API key, model name, and base URL per provider — the choice is persisted and applied directly to subsequent AI generation jobs. No env-var edits, no restart required.
+
+### 🖼️ PPTX Image Inlining
+Images extracted from the `.pptx` are inlined into the HTML (base64) instead of just counting references, so exported web decks faithfully reproduce the original visuals.
+
+### 🎨 Custom Themes & Templates
+A built-in theme library plus user-defined themes (colors, radius, shadow, spacing), with a template browser for one-click application to unify the whole deck's visual style.
+
+### ⚙️ Async Generation Pipeline
+AI generation runs as a background job (visible progress, retryable on failure), so large documents never block the UI.
+
+### 📦 PPTX Re-Export
+Export the edited deck back to `.pptx`, closing the "PPT → Web → PPT" loop.
+
 ---
 
 ## 🚀 Quick Start
@@ -105,12 +120,26 @@ npm install
 cp .env.local.example .env.local
 ```
 
-Edit `.env.local` and add your Anthropic API key (leave blank for offline Mock mode):
+Edit `.env.local` to configure the default AI Provider (leave blank for offline Mock mode):
 
 ```env
+# One of: anthropic | openai | ollama | mock
+# (UI "AI Provider" setting takes precedence when set)
+AI_PROVIDER=mock
+
+# Anthropic
 ANTHROPIC_API_KEY=sk-ant-...
 ANTHROPIC_MODEL=claude-3-5-sonnet-20240620
+
+# OpenAI
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o
+
+# Local Ollama
+OLLAMA_BASE_URL=http://localhost:11434
 ```
+
+> You can also configure the provider from the editor's "AI Provider" panel — changes take effect immediately and persist. The UI choice overrides the env var.
 
 ### Run
 
@@ -153,7 +182,7 @@ This generates 5 built-in demo projects: Company Profile, Product Launch, Invest
 | Module | Path | Description |
 |---|---|---|
 | PPTX Parser | `lib/pptx/` | JSZip-based `.pptx` decompression, XML text & structure extraction |
-| AI Engine | `lib/ai/` | Anthropic Claude interface + Mock offline provider |
+| AI Engine | `lib/ai/` | Multi-provider: Anthropic / OpenAI / Ollama + Mock offline provider |
 | Deck Engine | `lib/deck/` | Themes, motion, chart rendering, section factory, quality checks |
 | Export Engine | `lib/export/` | Zero-dependency static HTML generation |
 | Storage | `lib/storage/` | Project persistence (JSON file store) |
@@ -183,7 +212,7 @@ web-deck/
 │   ├── layout/                   # Layout components
 │   └── ui/                       # Shared UI components
 ├── lib/
-│   ├── ai/                       # AI providers (Anthropic + Mock)
+│   ├── ai/                       # AI providers (Anthropic / OpenAI / Ollama / Mock)
 │   ├── deck/                     # Deck core logic
 │   ├── export/                   # Static HTML export
 │   ├── i18n/                     # Internationalization

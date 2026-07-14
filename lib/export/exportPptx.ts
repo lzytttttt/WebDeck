@@ -30,6 +30,22 @@ function hexToRgb(hex: string): string {
   return hex.replace(/^#/, "");
 }
 
+/**
+ * Build the pptxgenjs image source options for an image URL.
+ *
+ * pptxgenjs' `addImage` only accepts a real URL / file path via `path`, but a
+ * WebDeck may embed images as base64 data URIs — most notably the images
+ * extracted from a source .pptx in P2.1. For those we pass the stripped
+ * base64 string via the `data` option instead, so the picture is embedded in
+ * the .pptx rather than silently dropped to a placeholder.
+ */
+function imageSource(url: string): { path?: string; data?: string } {
+  if (/^data:/i.test(url)) {
+    return { data: url.slice(5) }; // drop the leading "data:" prefix
+  }
+  return { path: url };
+}
+
 interface PptxTheme {
   background: string;
   color: string;
@@ -334,11 +350,11 @@ function addImage(pt: PptxGenJS, s: ImageSection, th: PptxTheme) {
     });
   }
 
-  // Add image if URL is a valid HTTP URL
-  if (s.image.url && /^https?:\/\//.test(s.image.url)) {
+  // Add image if URL is present (http/https or inline base64 data URI)
+  if (s.image.url) {
     try {
       slide.addImage({
-        path: s.image.url,
+        ...imageSource(s.image.url),
         x: 0.8,
         y: s.title ? 1.5 : 0.5,
         w: 8.4,
@@ -408,10 +424,10 @@ function addGallery(pt: PptxGenJS, s: GallerySection, th: PptxTheme) {
 
   images.forEach((img, i) => {
     const pos = positions[i];
-    if (img.url && /^https?:\/\//.test(img.url)) {
+    if (img.url) {
       try {
         slide.addImage({
-          path: img.url,
+          ...imageSource(img.url),
           ...pos,
           sizing: { type: "contain", w: pos.w, h: pos.h },
         });

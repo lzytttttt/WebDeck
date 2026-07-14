@@ -20,6 +20,7 @@ import { DevicePreviewSwitch, DEVICE_WIDTH } from "./DevicePreviewSwitch";
 import type { DeviceMode } from "./DevicePreviewSwitch";
 import { PublishChecklistModal } from "./PublishChecklistModal";
 import { ExportCheckBadge } from "./ExportCheckBadge";
+import { ProviderSettings } from "./ProviderSettings";
 import { ShortcutsModal } from "./ShortcutsModal";
 import { useEditorShortcuts } from "./useEditorShortcuts";
 import { computePublishChecks } from "@/lib/deck/publishChecks";
@@ -45,11 +46,15 @@ function GeneratingOverlay({
   progress,
   error,
   onRetry,
+  onCancel,
+  cancelling,
 }: {
   message: string;
   progress: number;
   error: string | null;
   onRetry: () => void;
+  onCancel?: () => void;
+  cancelling?: boolean;
 }) {
   if (error) {
     return (
@@ -79,6 +84,16 @@ function GeneratingOverlay({
           />
         </div>
       </div>
+      {onCancel ? (
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={cancelling}
+          className="rounded-md border border-border px-4 py-1.5 text-sm font-medium transition-colors hover:bg-accent/10 disabled:opacity-50"
+        >
+          {cancelling ? "取消中…" : "取消生成"}
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -104,6 +119,8 @@ function pollJob(
           resolve(data.result);
         } else if (data.status === "failed") {
           reject(new Error(data.error || "Generation failed"));
+        } else if (data.status === "cancelled") {
+          reject(new Error("cancelled"));
         } else {
           setTimeout(poll, 2000);
         }
@@ -124,11 +141,14 @@ export function Editor({ project }: { project: Project }) {
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [generateProgress, setGenerateProgress] = useState(0);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
 
   const triggerGenerate = useCallback(async () => {
     setGenerating(true);
     setGenerateError(null);
     setGenerateProgress(0);
+    setJobId(null);
     try {
       // Step 1: kick off async job
       const res = await fetch(`/api/projects/${project.id}/generate`, {
@@ -137,22 +157,42 @@ export function Editor({ project }: { project: Project }) {
         body: JSON.stringify({ mode: "conservative", regenerate: true }),
       });
       if (!res.ok) throw new Error("Generation failed to start");
-      const { jobId } = (await res.json()) as { jobId: string; status: string };
+      const { jobId: jid } = (await res.json()) as { jobId: string; status: string };
+      setJobId(jid);
 
       // Step 2: poll for completion
-      const result = await pollJob(jobId, setGenerateProgress);
+      const result = await pollJob(jid, setGenerateProgress);
       const projectResult = result as Project;
       if (projectResult.webDeck) {
         setGeneratedDeck(projectResult.webDeck);
       } else {
         setGenerateError("生成失败，请重试");
       }
-    } catch {
-      setGenerateError("生成失败，请重试");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg === "cancelled") {
+        setGenerateError(t.editor.generationCancelled);
+      } else {
+        setGenerateError("生成失败，请重试");
+      }
     } finally {
       setGenerating(false);
+      setJobId(null);
     }
-  }, [project.id]);
+  }, [project.id, t]);
+
+  const cancelGenerate = useCallback(async () => {
+    if (!jobId) return;
+    setCancelling(true);
+    try {
+      await fetch(`/api/jobs/${jobId}`, { method: "DELETE" });
+    } catch {
+      // Network errors are non-fatal; the server-side cancel still applies.
+    }
+    setGenerating(false);
+    setGenerateError(t.editor.generationCancelled);
+    setCancelling(false);
+  }, [jobId, t]);
 
   useEffect(() => {
     if (needsGeneration && !generatedDeck && !generating && !generateError) {
@@ -168,6 +208,8 @@ export function Editor({ project }: { project: Project }) {
         progress={generateProgress}
         error={generateError}
         onRetry={triggerGenerate}
+        onCancel={generating && jobId ? cancelGenerate : undefined}
+        cancelling={cancelling}
       />
     );
   }
@@ -192,6 +234,7 @@ function EditorInner({
   const [publishing, setPublishing] = useState(false);
   const [checklistOpen, setChecklistOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [device, setDevice] = useState<DeviceMode>("desktop");
   const [shareId, setShareId] = useState<string | null>(
     project.share?.shareId ?? null,
@@ -379,6 +422,15 @@ function EditorInner({
             {t.common.publish}
           </Button>
           <ExportMenu projectId={project.id} t={t} />
+          <button
+            type="button"
+            onClick={() => setSettingsOpen(true)}
+            title={t.settings.title}
+            aria-label={t.settings.title}
+            className="flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-sm text-muted-foreground hover:bg-secondary"
+          >
+            {t.settings.title}
+          </button>
           <ExportCheckBadge projectId={project.id} />
           <button
             onClick={() => setShortcutsOpen(true)}
@@ -506,6 +558,10 @@ function EditorInner({
       {shortcutsOpen ? (
         <ShortcutsModal onClose={() => setShortcutsOpen(false)} />
       ) : null}
+
+      {settingsOpen ? (
+        <ProviderSettings onClose={() => setSettingsOpen(false)} />
+      ) : null}
     </div>
   );
 }
@@ -515,18 +571,27 @@ function ExportMenu({ projectId, t }: { projectId: string; t: ReturnType<typeof 
   const [open, setOpen] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
 
-  const handleExport = (format: string) => {
+  const handleExport = async (format: string) => {
     setExporting(format);
     setOpen(false);
-    // Trigger download via hidden link click
-    const a = document.createElement("a");
-    a.href = `/api/projects/${projectId}/export-${format}`;
-    a.download = "";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    // Reset after a short delay (the browser handles the actual download)
-    setTimeout(() => setExporting(null), 2000);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/export-${format}`);
+      if (!res.ok) throw new Error(`Export failed: ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      // Surface failure instead of silently dropping the download.
+      alert(t.errors.exportFailed);
+    } finally {
+      setExporting(null);
+    }
   };
 
   const items = [

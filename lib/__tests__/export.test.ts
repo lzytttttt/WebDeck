@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { exportMarkdown } from "@/lib/export/exportMarkdown";
+import { exportStaticHtml } from "@/lib/export/exportStaticHtml";
+import { exportPptx } from "@/lib/export/exportPptx";
 import type {
   WebDeck,
   DeckTheme,
@@ -331,5 +333,69 @@ describe("exportMarkdown", () => {
     };
     const md = exportMarkdown(makeDeck([cmp]));
     expect(md).toContain("foo \\| bar");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// exportStaticHtml
+// ---------------------------------------------------------------------------
+
+describe("exportStaticHtml", () => {
+  it("uses inlined theme colors from the design inspector (not re-resolved by id)", () => {
+    const deck = makeDeck([
+      {
+        id: "s1",
+        type: "slide",
+        sourceSlideIndexes: [],
+        title: "Hello",
+        bullets: ["a"],
+      },
+    ]);
+    // A built-in id but with a user-tweaked accent color.
+    deck.theme = {
+      ...DEFAULT_THEME,
+      id: "classic-business",
+      colors: { ...DEFAULT_THEME.colors, accent: "#ff5ca8" },
+    };
+    const html = exportStaticHtml(deck);
+    expect(html).toContain("--deck-accent:#ff5ca8");
+  });
+
+  it("still resolves a built-in theme by id when only a stub is present", () => {
+    const deck = makeDeck([
+      {
+        id: "s1",
+        type: "slide",
+        sourceSlideIndexes: [],
+        title: "Hello",
+        bullets: ["a"],
+      },
+    ]);
+    deck.theme = { id: "classic-business", colors: {} } as typeof deck.theme;
+    const html = exportStaticHtml(deck);
+    expect(html).toContain("--deck-accent:");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// exportPptx
+// ---------------------------------------------------------------------------
+
+describe("exportPptx", () => {
+  const PNG_1X1 =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQAY3Y2wAAAAAElFTkSuQmCC";
+
+  it("embeds inline base64 images (P2.1 extracted media) as pptx media", async () => {
+    const img: ImageSection = {
+      id: "i1",
+      type: "image",
+      sourceSlideIndexes: [],
+      title: "Shot",
+      image: { url: PNG_1X1, alt: "screenshot" },
+    };
+    const buf = await exportPptx(makeDeck([img]));
+    expect(buf.length).toBeGreaterThan(0);
+    // Zip stores entry names in clear text; an embedded image shows up here.
+    expect(buf.toString("latin1")).toContain("ppt/media");
   });
 });

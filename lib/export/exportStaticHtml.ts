@@ -126,10 +126,14 @@ export type ExportMeta = {
 };
 
 export function exportStaticHtml(deck: WebDeck, meta: ExportMeta = {}): string {
-  // Preserve custom theme fields (customFonts, customCss) when present.
-  const theme = deck.theme?.customFonts || deck.theme?.customCss
-    ? deck.theme
-    : getThemeById(deck.theme?.id);
+  // Prefer the inlined theme when it carries real colors — this is what the
+  // design inspector produces after a user tweaks colors/shape in place.
+  // Otherwise fall back to resolving the built-in theme by id, so seed stubs
+  // like { id, colors: {} } still render with a complete palette.
+  const theme =
+    deck.theme?.colors && Object.keys(deck.theme.colors).length > 0
+      ? deck.theme
+      : getThemeById(deck.theme?.id);
   const themeStyle = cssVarsToString(themeToCssVars(theme));
   const googleFontsUrl = getGoogleFontsUrl(theme);
   const customCss = buildCustomCss(theme);
